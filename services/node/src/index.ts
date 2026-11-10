@@ -82,6 +82,10 @@ async function demoBuy(name: string, document?: string) {
   }
 }
 
+// ---- optional: serve the demo sellers from this same process (one host, one port) ----------
+
+const sellerRoutes = process.env.MOUNT_SELLERS === "1" ? (await import("@assay/sellers")).sellerRoutes() : null;
+
 // ---- server -----------------------------------------------------------------------------
 
 const server = Bun.serve({
@@ -91,6 +95,8 @@ const server = Bun.serve({
     const url = new URL(req.url);
     const p = url.pathname;
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+    const sellerRoute = sellerRoutes?.get(p);
+    if (sellerRoute) return sellerRoute(req);
     try {
       if (p === "/" || p === "/health") {
         return json({ ok: true, service: "assay-node", chainId: CHAIN_ID, escrow: cfg.escrow, validator: cfg.validator ?? null, keeper: keeper.account.address });

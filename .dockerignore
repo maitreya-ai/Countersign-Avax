@@ -1,0 +1,9 @@
+node_modules
+**/node_modules
+web/.next
+contracts
+data
+.env
+.env.*
+.git
+docs

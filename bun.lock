@@ -50,6 +50,7 @@
       "dependencies": {
         "@assay/agent": "workspace:*",
         "@assay/core": "workspace:*",
+        "@assay/sellers": "workspace:*",
         "@assay/x402": "workspace:*",
         "viem": "^2.21.0",
       },
