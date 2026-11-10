@@ -82,8 +82,8 @@ export function TryIt() {
 
   const assay = offer?.assay;
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
-      <div className="space-y-6">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <div className="min-w-0 space-y-6">
         <Card className="bg-card p-5">
           <h3 className="font-heading text-lg font-bold">1 · Pick a seller</h3>
           <div className="mt-4 grid grid-cols-2 gap-3">
@@ -141,7 +141,7 @@ export function TryIt() {
         </Card>
       </div>
 
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <Card className="bg-black p-5 text-paper">
           <div className="flex items-center justify-between">
             <h3 className="font-heading text-lg font-bold">The 402 offer, live from the seller</h3>
@@ -158,7 +158,7 @@ export function TryIt() {
           {assay && (
             <div className="mt-3 border-[3px] border-green p-3">
               <div className="flex justify-between font-mono text-sm"><b className="text-green">assay</b><span>{usdc(assay.amount)} USDC</span></div>
-              <dl className="mt-2 space-y-1 font-mono text-[11px] leading-relaxed text-paper/85">
+              <dl className="mt-2 space-y-1 break-all font-mono text-[11px] leading-relaxed text-paper/85">
                 <div><span className="text-yellow">rubric</span> &ldquo;{assay.extra.rubric}&rdquo;</div>
                 <div><span className="text-yellow">policy</span> {assay.extra.policy.minAgree}/{assay.extra.policy.judges} judges agree · grounded={String(assay.extra.policy.requireGrounded)} · conf ≥ {assay.extra.policy.minConfBps / 100}%</div>
                 <div><span className="text-yellow">escrow</span> {assay.extra.escrow}</div>

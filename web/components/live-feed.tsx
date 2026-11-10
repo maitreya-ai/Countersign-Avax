@@ -23,8 +23,8 @@ export function LiveFeed() {
   const { data: act } = usePoll<{ events: { escrow_id: string; kind: string; tx: string | null; detail: string | null; at: number }[] }>("/activity?limit=25", 2500);
   const rows = data?.escrows ?? [];
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
-      <div>
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="min-w-0">
         {error && !data && <p className="nb-card mb-4 bg-pink p-4 font-mono text-sm">Node offline: {error}</p>}
         {data && rows.length === 0 && (
           <div className="nb-card bg-card p-8 text-center">
@@ -54,7 +54,7 @@ export function LiveFeed() {
           })}
         </div>
       </div>
-      <aside>
+      <aside className="min-w-0">
         <div className="nb-card sticky top-24 bg-black p-4 text-paper">
           <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase text-yellow">
             <span className="nb-live inline-block h-2.5 w-2.5 bg-green" /> Activity
@@ -66,7 +66,7 @@ export function LiveFeed() {
                 <div className="font-mono text-[11px] text-paper/70">
                   <Link className="underline" href={`/escrow/${ev.escrow_id}`}>{short(ev.escrow_id, 6)}</Link> · {ago(ev.at)}
                 </div>
-                {ev.detail && <div className="mt-0.5 font-mono text-[11px] text-paper/60">{ev.detail}</div>}
+                {ev.detail && <div className="mt-0.5 break-all font-mono text-[11px] text-paper/60">{ev.detail}</div>}
                 {ev.tx && <div className="[&_a]:text-paper"><TxLink hash={ev.tx} /></div>}
               </li>
             ))}

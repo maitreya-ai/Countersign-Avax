@@ -53,7 +53,7 @@ export default function Home() {
     <>
       {/* hero */}
       <section className="border-b-[3px] border-black">
-        <Container className="grid items-center gap-12 py-14 md:grid-cols-[1.25fr_1fr] md:py-20">
+        <Container className="grid items-center gap-12 pb-24 pt-14 md:grid-cols-[1.25fr_1fr] md:pb-24 md:pt-20">
           <div>
             <div className="flex flex-wrap gap-2">
               <Kicker>x402 · Avalanche</Kicker>

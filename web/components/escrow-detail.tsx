@@ -114,8 +114,8 @@ export function EscrowDetail({ id }: { id: string }) {
       </Card>
 
       {/* promise + served */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <div className="min-w-0 space-y-6">
           <Card className="bg-yellow p-5">
             <h3 className="font-heading text-lg font-bold">The seller&apos;s promise (rubric)</h3>
             <p className="mt-2 font-mono text-sm leading-relaxed">&ldquo;{e.rubric}&rdquo;</p>
@@ -144,7 +144,7 @@ export function EscrowDetail({ id }: { id: string }) {
             {e.settleGas && <p className="mt-3 font-mono text-xs">settle gas used: {Number(e.settleGas).toLocaleString()}</p>}
           </Card>
         </div>
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {equivocated && other && committed ? (
             <>
               <Served text={other.body} title="What the buyer was served" tone="bg-pink" />
