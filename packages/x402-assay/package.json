@@ -1,0 +1,10 @@
+{
+  "name": "@assay/x402",
+  "version": "0.1.0",
+  "description": "x402 'assay' payment scheme: pay into an escrow that settles only on verified LLM verdicts (Avalanche).",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": { ".": "./src/index.ts", "./server": "./src/server.ts", "./client": "./src/client.ts" },
+  "dependencies": { "viem": "^2.21.0" }
+}

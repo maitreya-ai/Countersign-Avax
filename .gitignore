@@ -3,7 +3,7 @@ node_modules/
 /out/
 web/out/
 .env
-.env*.local
+.env.*
 !.env.example
 .DS_Store
 *.log
@@ -15,3 +15,9 @@ data/
 contracts/out/
 contracts/cache/
 contracts/broadcast/*/31337/
+
+# internal planning notes (kept locally, never published)
+docs/project-overview.md
+docs/architecture.md
+# local fork deployments
+deployments/local-*.json

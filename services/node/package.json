@@ -1,0 +1,7 @@
+{
+  "name": "@assay/node",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "bun run src/index.ts" },
+  "dependencies": { "@assay/x402": "workspace:*", "@assay/core": "workspace:*", "@assay/agent": "workspace:*", "viem": "^2.21.0" }
+}

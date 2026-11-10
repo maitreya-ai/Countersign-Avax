@@ -1,0 +1,28 @@
+{
+  "name": "assay",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "demo/*"
+  ],
+  "scripts": {
+    "test": "bun test packages",
+    "test:contracts": "cd contracts && forge test",
+    "typecheck": "bunx tsc -p packages/x402-assay && bunx tsc -p packages/core && bunx tsc -p services/node",
+    "node": "bun run services/node/src/index.ts",
+    "sellers": "bun run demo/sellers/src/index.ts",
+    "agent": "bun run demo/agent/buy.ts",
+    "web": "cd web && bun run dev"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "viem": "^2.21.0",
+    "@assay/x402": "workspace:*",
+    "@assay/core": "workspace:*"
+  }
+}
