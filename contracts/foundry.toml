@@ -9,4 +9,6 @@ via_ir = true
 evm_version = "cancun"
 
 [rpc_endpoints]
-arc_testnet = "https://rpc.testnet.arc.io"
+fuji = "https://api.avax-test.network/ext/bc/C/rpc"
+avalanche = "https://api.avax.network/ext/bc/C/rpc"
+local = "http://127.0.0.1:8545"

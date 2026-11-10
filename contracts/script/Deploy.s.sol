@@ -4,27 +4,39 @@ pragma solidity ^0.8.24;
 import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SignerRegistry} from "../src/SignerRegistry.sol";
-import {CountersignOracle} from "../src/CountersignOracle.sol";
-import {CountersignEscrow} from "../src/CountersignEscrow.sol";
+import {AssayOracle} from "../src/AssayOracle.sol";
+import {AssayEscrow} from "../src/AssayEscrow.sol";
+import {AssayValidator} from "../src/AssayValidator.sol";
+import {IIdentityRegistry, IValidationRegistry} from "../src/interfaces/IERC8004.sol";
 
-/// Usage (Arc testnet, USDC = 0x3600000000000000000000000000000000000000):
-///   USDC=0x3600000000000000000000000000000000000000 forge script script/Deploy.s.sol \
-///     --rpc-url https://rpc.testnet.arc.io --private-key $ARC_PRIVATE_KEY --broadcast
+/// Deploys the Assay contracts. On chains without the ERC-8004 Validation Registry (C-Chain mainnet
+/// today), leave ERC8004_VALIDATION empty and the validator is skipped.
+///   forge script script/Deploy.s.sol --rpc-url fuji --broadcast
+/// Env: DEPLOYER_PRIVATE_KEY, USDC, ERC8004_IDENTITY, ERC8004_VALIDATION, NODE_URL
 contract Deploy is Script {
     function run() external {
-        address usdc = vm.envAddress("USDC");
-        uint256 pk = vm.envUint("ARC_PRIVATE_KEY");
+        uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address owner = vm.addr(pk);
+        address usdc = vm.envAddress("USDC");
+        address validationAddr = vm.envOr("ERC8004_VALIDATION", address(0));
+        address identityAddr = vm.envOr("ERC8004_IDENTITY", address(0));
+        string memory baseURI = string.concat(vm.envOr("NODE_URL", string("http://localhost:8402")), "/escrows/");
 
         vm.startBroadcast(pk);
         SignerRegistry registry = new SignerRegistry(owner);
-        CountersignOracle oracle = new CountersignOracle(registry);
-        CountersignEscrow escrow = new CountersignEscrow(IERC20(usdc), oracle);
+        AssayOracle oracle = new AssayOracle(registry);
+        AssayEscrow escrow = new AssayEscrow(IERC20(usdc), oracle);
+        AssayValidator validator;
+        if (validationAddr != address(0)) {
+            validator = new AssayValidator(
+                IValidationRegistry(validationAddr), IIdentityRegistry(identityAddr), escrow, baseURI, owner
+            );
+        }
         vm.stopBroadcast();
 
-        console.log("SignerRegistry", address(registry));
-        console.log("CountersignOracle ", address(oracle));
-        console.log("CountersignEscrow ", address(escrow));
-        console.log("USDC          ", usdc);
+        console.log("SIGNER_REGISTRY=%s", address(registry));
+        console.log("ASSAY_ORACLE=%s", address(oracle));
+        console.log("ASSAY_ESCROW=%s", address(escrow));
+        console.log("ASSAY_VALIDATOR=%s", address(validator));
     }
 }

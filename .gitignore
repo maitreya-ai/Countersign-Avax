@@ -1,11 +1,16 @@
 node_modules/
 .next/
-out/
+/out/
+web/out/
 .env
 .env*.local
+!.env.example
 .DS_Store
 *.log
 .vercel
+data/
+*.db
+*.db-*
 # foundry
 contracts/out/
 contracts/cache/

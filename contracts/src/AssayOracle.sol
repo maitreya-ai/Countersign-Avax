@@ -5,19 +5,20 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {SignerRegistry} from "./SignerRegistry.sol";
 
-/// @title CountersignOracle
-/// @notice Verifies that an LLM verdict was produced by a registered 0G TeeML enclave and applies
-///         a quorum policy. Pure verification: no owner, no state.
+/// @title AssayOracle
+/// @notice Verifies that each judge verdict was signed by a registered judge key over the exact
+///         model request and response bytes, then applies a quorum policy. Pure verification:
+///         no owner, no state.
 ///
-/// What a 0G TeeML broker signs (0g-serving-broker, api/inference/internal/ctrl/signing.go,
-/// `signChatWithKey`): the ASCII text
+/// A judge signer signs the ASCII text
 ///
 ///     hex(sha256(requestBody)) ":" hex(sha256(responseBody))        // 64 + 1 + 64 = 129 bytes, lowercase
 ///
-/// with EIP-191 `personal_sign` by the enclave key published on 0G chain as
-/// `InferenceServing.getService(provider).teeSignerAddress`. The contract therefore receives the
-/// exact request and response bytes, recomputes both SHA-256 hashes, rebuilds the signed text,
-/// recovers the signer, and only then reads the verdict out of the response body.
+/// with EIP-191 `personal_sign`. This is the same layout TEE inference gateways use for signed
+/// chat completions, so a self-attested judge key can later be swapped for an enclave key without
+/// changing this contract. The contract receives the exact request and response bytes, recomputes
+/// both SHA-256 hashes, rebuilds the signed text, recovers the signer, and only then reads the
+/// verdict out of the response body.
 ///
 /// The judge prompt forces the model's reply to begin with a fixed-width header:
 ///
@@ -27,14 +28,14 @@ import {SignerRegistry} from "./SignerRegistry.sol";
 /// The header is located inside the response JSON (`"content":"VERDICT:...`), and the request
 /// body must contain both escrow hashes, so a genuine signature over a verdict for a different
 /// escrow fails on the hash checks rather than on the signature.
-contract CountersignOracle {
+contract AssayOracle {
     using ECDSA for bytes32;
 
     struct Attested {
-        bytes reqBody;    // exact bytes sent to {provider.url}/v1/proxy/chat/completions
+        bytes reqBody;    // exact bytes sent to the model API
         bytes respBody;   // exact bytes received from it
-        bytes signature;  // 65-byte EIP-191 signature from GET {url}/v1/proxy/signature/{chatID}
-        address provider; // 0G provider address; must match the registry record for the signer
+        bytes signature;  // 65-byte EIP-191 signature over signedText(reqBody, respBody)
+        address provider; // judge provider id; must match the registry record for the signer
     }
 
     struct Policy {
@@ -66,7 +67,7 @@ contract CountersignOracle {
         registry = registry_;
     }
 
-    /// @notice The exact text the enclave signs for this request/response pair.
+    /// @notice The exact text a judge signer signs for this request/response pair.
     function signedText(bytes calldata reqBody, bytes calldata respBody) public pure returns (bytes memory text) {
         bytes32 r = sha256(reqBody);
         bytes32 p = sha256(respBody);
@@ -89,7 +90,7 @@ contract CountersignOracle {
         if (prov != a.provider) revert ProviderMismatch(signer, prov, a.provider);
         model = registry.modelOf(signer);
 
-        // the prompt the enclave saw must name this escrow
+        // the prompt the judge saw must name this escrow
         if (!_contains(a.reqBody, _hex0x(rubricHash))) revert RequestNotBound(rubricHash, true);
         if (!_contains(a.reqBody, _hex0x(evidenceHash))) revert RequestNotBound(evidenceHash, false);
 

@@ -4,29 +4,30 @@ pragma solidity ^0.8.24;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title SignerRegistry
-/// @notice Mirror of 0G Compute `InferenceServing.getService(provider).teeSignerAddress`
-///         on the chain where Verdict settles. Each record carries the 0G block number and
-///         transaction it was read from so anyone can audit the mirror against 0G chain.
-/// @dev    Hackathon trust model: the owner (the registry mirror script) is trusted to copy
-///         records faithfully. Roadmap: replace `sync` with a 0G chain state proof.
+/// @notice The set of judge signing keys the oracle accepts. Each signer is bound to one provider id
+///         and one model, so the oracle can require that judges are distinct models. Every change is
+///         an event, so anyone can audit which keys were trusted at any block.
+/// @dev    Trust model: the owner decides which judge keys count. In self-attested mode the keys are
+///         derived per model by the judge node; with TEE judges they are the enclave signing keys, and
+///         `sourceBlock` / `sourceTx` point at the attestation record the key was copied from.
 contract SignerRegistry is Ownable {
     struct Record {
-        address provider;   // 0G provider address (Service.provider)
-        bytes32 model;      // keccak256(bytes(Service.model))
-        uint64 zgBlock;     // 0G block the record was read at
-        bytes32 zgTxHash;   // 0G tx that last set the service (or 0 if read from state)
+        address provider;    // provider id the signer speaks for
+        bytes32 model;       // keccak256(bytes(model id))
+        uint64 sourceBlock;  // block of the attestation record the key came from (0 = self-attested)
+        bytes32 sourceTx;    // transaction of that record (0 = none)
         bool active;
     }
 
     mapping(address signer => Record) public records;
 
-    event Synced(address indexed signer, address indexed provider, string model, uint64 zgBlock, bytes32 zgTxHash);
+    event Synced(address indexed signer, address indexed provider, string model, uint64 sourceBlock, bytes32 sourceTx);
     event Revoked(address indexed signer);
 
     constructor(address owner_) Ownable(owner_) {}
 
-    /// @notice Register or refresh an enclave signer for a provider/model.
-    function sync(address provider, address signer, string calldata model, uint64 zgBlock, bytes32 zgTxHash)
+    /// @notice Register or refresh a judge signer for a provider/model.
+    function sync(address provider, address signer, string calldata model, uint64 sourceBlock, bytes32 sourceTx)
         external
         onlyOwner
     {
@@ -34,11 +35,11 @@ contract SignerRegistry is Ownable {
         records[signer] = Record({
             provider: provider,
             model: keccak256(bytes(model)),
-            zgBlock: zgBlock,
-            zgTxHash: zgTxHash,
+            sourceBlock: sourceBlock,
+            sourceTx: sourceTx,
             active: true
         });
-        emit Synced(signer, provider, model, zgBlock, zgTxHash);
+        emit Synced(signer, provider, model, sourceBlock, sourceTx);
     }
 
     function revoke(address signer) external onlyOwner {
