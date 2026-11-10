@@ -38,7 +38,7 @@ export async function sha256Hex(b: Uint8Array): Promise<string> {
   return bytesToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", b as BufferSource))).slice(2);
 }
 
-/** The exact text a judge signer signs (matches AssayOracle.signedText). */
+/** The exact text a judge signer signs (matches CountersignOracle.signedText). */
 export async function expectedSignedText(reqBody: Uint8Array, respBody: Uint8Array): Promise<string> {
   return `${await sha256Hex(reqBody)}:${await sha256Hex(respBody)}`;
 }

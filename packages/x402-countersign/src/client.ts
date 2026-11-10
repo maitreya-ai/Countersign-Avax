@@ -1,10 +1,10 @@
-// Buyer side of the x402 `assay` scheme.
+// Buyer side of the x402 `countersign` scheme.
 //
-//   const p = await fetchWithAssay(url, { method: "POST", body }, { account, publicClient, maxAmount: 1_000_000n });
+//   const p = await fetchWithCountersign(url, { method: "POST", body }, { account, publicClient, maxAmount: 1_000_000n });
 //   const final = await p.watch();   // Resolved (seller paid) | Refunded (judged NO, equivocation, deadline)
 //
-// 1. Unpaid request -> 402 offer. Pick `assay` (or `exact`).
-// 2. Optional trust check: the seller's ERC-8004 validation summary from AssayValidator.
+// 1. Unpaid request -> 402 offer. Pick `countersign` (or `exact`).
+// 2. Optional trust check: the seller's ERC-8004 validation summary from CountersignValidator.
 // 3. Compute the terms hash locally and sign ONE gasless ReceiveWithAuthorization (to = escrow).
 // 4. On 200: rebuild the evidence from the exact bytes sent and received, check the seller's receipt,
 //    and send it to the node as a backup (so a seller cannot withhold or swap evidence).
@@ -18,7 +18,7 @@ import { buildEvidence } from "./evidence";
 import { postEvidence } from "./server";
 import { NO_AGENT, escrowIdFor, parseAgentId, randomSalt, rubricHashOf, termsHash } from "./terms";
 import {
-  REASON_NAMES, SCHEME, STATE_NAMES, VALIDATION_TAG_STRING, type AssayExtra, type AssayReceipt, type Authorization,
+  REASON_NAMES, SCHEME, STATE_NAMES, VALIDATION_TAG_STRING, type CountersignExtra, type CountersignReceipt, type Authorization,
   type EscrowView, type PaymentRequired, type PaymentRequirements, type SettleResponse,
 } from "./types";
 
@@ -32,7 +32,7 @@ export function buyerAddress(b: Buyer): Address {
 export interface Offer {
   status: number;
   required?: PaymentRequired;
-  assay?: PaymentRequirements<AssayExtra>;
+  countersign?: PaymentRequirements<CountersignExtra>;
   exact?: PaymentRequirements;
 }
 
@@ -57,17 +57,17 @@ export interface Purchase {
   scheme: string;
   payment?: SettleResponse;
   escrowId?: Hex;
-  receipt?: AssayReceipt;
+  receipt?: CountersignReceipt;
   receiptValid?: boolean;
   evidence?: string;
   trust?: SellerTrust;
   watch(opts?: { intervalMs?: number; timeoutMs?: number; onTick?: (e: EscrowView) => void }): Promise<FinalEscrow>;
 }
 
-export interface FetchWithAssayOptions {
+export interface FetchWithCountersignOptions {
   account: Buyer;
   publicClient: PublicClient;
-  prefer?: "assay" | "exact";
+  prefer?: "countersign" | "exact";
   maxAmount: bigint;
   minTrust?: { minCount: number; minAvg: number; requireSelfFiling?: boolean };
   /** Send our copy of the evidence + receipt to the node (default true). */
@@ -79,7 +79,7 @@ function bodyBytes(init: RequestInit): Uint8Array {
   if (init.body === undefined || init.body === null) return new Uint8Array();
   if (typeof init.body === "string") return new TextEncoder().encode(init.body);
   if (init.body instanceof Uint8Array) return init.body;
-  throw new Error("fetchWithAssay needs a string or Uint8Array body (exact bytes are part of the evidence)");
+  throw new Error("fetchWithCountersign needs a string or Uint8Array body (exact bytes are part of the evidence)");
 }
 
 /** Make the unpaid request and return the seller's offer. */
@@ -91,13 +91,13 @@ export async function getOffer(url: string, init: RequestInit = {}): Promise<Off
   return {
     status: 402,
     required,
-    assay: required.accepts.find((a) => a.scheme === SCHEME) as PaymentRequirements<AssayExtra> | undefined,
+    countersign: required.accepts.find((a) => a.scheme === SCHEME) as PaymentRequirements<CountersignExtra> | undefined,
     exact: required.accepts.find((a) => a.scheme === "exact"),
   };
 }
 
 /** Read the seller's verified track record before buying. */
-export async function sellerTrust(client: PublicClient, req: PaymentRequirements<AssayExtra>): Promise<SellerTrust> {
+export async function sellerTrust(client: PublicClient, req: PaymentRequirements<CountersignExtra>): Promise<SellerTrust> {
   const { extra } = req;
   const agentId = parseAgentId(extra.agentId);
   if (agentId === NO_AGENT || !extra.validator || !extra.validationRegistry || !extra.identityRegistry) {
@@ -121,14 +121,14 @@ export async function readEscrow(client: PublicClient, escrow: Address, id: Hex)
   return (await client.readContract({ address: escrow, abi: escrowAbi, functionName: "get", args: [id] })) as unknown as EscrowView;
 }
 
-export async function fetchWithAssay(url: string, init: RequestInit, opts: FetchWithAssayOptions): Promise<Purchase> {
+export async function fetchWithCountersign(url: string, init: RequestInit, opts: FetchWithCountersignOptions): Promise<Purchase> {
   const log = opts.log ?? (() => {});
   const sent = bodyBytes(init);
   const method = (init.method ?? "GET").toUpperCase();
   const offer = await getOffer(url, { ...init, body: sent as BodyInit });
   if (offer.status !== 402) throw new Error(`expected 402, got ${offer.status}`);
-  const prefer = opts.prefer ?? "assay";
-  const chosen = prefer === "assay" ? offer.assay ?? offer.exact : offer.exact ?? offer.assay;
+  const prefer = opts.prefer ?? "countersign";
+  const chosen = prefer === "countersign" ? offer.countersign ?? offer.exact : offer.exact ?? offer.countersign;
   if (!chosen) throw new Error("seller offers no supported scheme");
   if (BigInt(chosen.amount) > opts.maxAmount) throw new Error(`price ${chosen.amount} above maxAmount ${opts.maxAmount}`);
   const chainId = Number(chosen.network.split(":")[1]);
@@ -153,8 +153,8 @@ export async function fetchWithAssay(url: string, init: RequestInit, opts: Fetch
     };
   }
 
-  // ---- assay: judged escrow ----------------------------------------------------------
-  const req = chosen as PaymentRequirements<AssayExtra>;
+  // ---- countersign: judged escrow ----------------------------------------------------------
+  const req = chosen as PaymentRequirements<CountersignExtra>;
   const x = req.extra;
   let trust: SellerTrust | undefined;
   if (opts.minTrust) {
@@ -188,7 +188,7 @@ export async function fetchWithAssay(url: string, init: RequestInit, opts: Fetch
   const pr = res.headers.get(HEADERS.response);
   const payment: SettleResponse | undefined = pr ? decodeHeader(pr) : undefined;
   const rh = res.headers.get(HEADERS.receipt);
-  const receipt: AssayReceipt | undefined = rh ? decodeHeader(rh) : undefined;
+  const receipt: CountersignReceipt | undefined = rh ? decodeHeader(rh) : undefined;
 
   let receiptValid = false;
   let evidence: string | undefined;

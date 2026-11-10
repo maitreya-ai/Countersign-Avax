@@ -1,7 +1,7 @@
 import { LiveFeed } from "@/components/live-feed";
 import { Container, SectionTitle } from "@/components/ui";
 
-export const metadata = { title: "Live · Assay" };
+export const metadata = { title: "Live · Countersign" };
 
 export default function LivePage() {
   return (

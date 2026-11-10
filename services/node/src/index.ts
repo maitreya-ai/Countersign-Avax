@@ -1,11 +1,11 @@
-// assay node: x402 facilitator + evidence intake + keeper + read API for the dashboard.
+// countersign node: x402 facilitator + evidence intake + keeper + read API for the dashboard.
 //   bun run services/node/src/index.ts
 
 import { existsSync, readFileSync } from "node:fs";
 import type { Address, Hex } from "viem";
-import { CORS_HEADERS, REASON_NAMES, STATE_NAMES, VALIDATION_TAG_STRING, validationRegistryAbi, validatorAbi } from "@assay/x402";
-import { CHAIN_ID, EXPLORER, JUDGES, MODELS, RPC_URL, account, publicClient } from "@assay/core";
-import { buyFrom, SELLER_NAMES } from "@assay/agent";
+import { CORS_HEADERS, REASON_NAMES, STATE_NAMES, VALIDATION_TAG_STRING, validationRegistryAbi, validatorAbi } from "@countersign/x402";
+import { CHAIN_ID, EXPLORER, JUDGES, MODELS, RPC_URL, account, publicClient } from "@countersign/core";
+import { buyFrom, SELLER_NAMES } from "@countersign/agent";
 import { cfg, keeper } from "./ctx";
 import { facilitatorSettle, facilitatorVerify, supported } from "./facilitator";
 import { judgeRoute } from "./judgeApi";
@@ -84,7 +84,7 @@ async function demoBuy(name: string, document?: string) {
 
 // ---- optional: serve the demo sellers from this same process (one host, one port) ----------
 
-const sellerRoutes = process.env.MOUNT_SELLERS === "1" ? (await import("@assay/sellers")).sellerRoutes() : null;
+const sellerRoutes = process.env.MOUNT_SELLERS === "1" ? (await import("@countersign/sellers")).sellerRoutes() : null;
 
 // ---- server -----------------------------------------------------------------------------
 
@@ -99,7 +99,7 @@ const server = Bun.serve({
     if (sellerRoute) return sellerRoute(req);
     try {
       if (p === "/" || p === "/health") {
-        return json({ ok: true, service: "assay-node", chainId: CHAIN_ID, escrow: cfg.escrow, validator: cfg.validator ?? null, keeper: keeper.account.address });
+        return json({ ok: true, service: "countersign-node", chainId: CHAIN_ID, escrow: cfg.escrow, validator: cfg.validator ?? null, keeper: keeper.account.address });
       }
       if (p === "/config") {
         const d = deployment();
@@ -145,7 +145,7 @@ const server = Bun.serve({
   },
 });
 
-console.log(`assay node on :${server.port}  chain ${CHAIN_ID}  escrow ${cfg.escrow}  keeper ${keeper.account.address}`);
+console.log(`countersign node on :${server.port}  chain ${CHAIN_ID}  escrow ${cfg.escrow}  keeper ${keeper.account.address}`);
 db.query("UPDATE jobs SET status = 'retry' WHERE status IN ('judging', 'queued')").run();
 ensurePipelineSigners().catch((e) => console.warn(`[judges] could not register signers yet: ${(e as Error).message}`));
 startKeeper();

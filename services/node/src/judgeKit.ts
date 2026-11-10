@@ -1,8 +1,8 @@
 // Judge pipeline wiring for the node: make sure every self-attested judge key is in SignerRegistry.
 
 import { zeroHash, type Address } from "viem";
-import { registryAbi } from "@assay/x402";
-import { PIPELINE_MODELS, buildBundle, publicClient, selfAccount, settleArgs, toAttestedArg, type Bundle } from "@assay/core";
+import { registryAbi } from "@countersign/x402";
+import { PIPELINE_MODELS, buildBundle, publicClient, selfAccount, settleArgs, toAttestedArg, type Bundle } from "@countersign/core";
 import { cfg, send } from "./ctx";
 
 const known = new Set<string>();

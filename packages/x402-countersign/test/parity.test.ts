@@ -1,6 +1,6 @@
 // Parity: the TypeScript terms hash, escrow id, receipt digest and validation request hash must
 // equal what the deployed contracts compute. Spins up anvil and deploys the forge artifacts.
-//   (cd contracts && forge build) && bun test packages/x402-assay
+//   (cd contracts && forge build) && bun test packages/x402-countersign
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -13,7 +13,7 @@ import { NO_AGENT, TERMS_TAG, escrowIdFor, requestHashFor, rubricHashOf, termsHa
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const artifact = (name: string) => JSON.parse(readFileSync(`${ROOT}contracts/out/${name}.sol/${name}.json`, "utf8"));
-const haveArtifacts = existsSync(`${ROOT}contracts/out/AssayEscrow.sol/AssayEscrow.json`);
+const haveArtifacts = existsSync(`${ROOT}contracts/out/CountersignEscrow.sol/CountersignEscrow.json`);
 const PORT = 18545 + Math.floor(Math.random() * 1000);
 const rpc = `http://127.0.0.1:${PORT}`;
 const pk = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as Hex; // anvil #0
@@ -39,9 +39,9 @@ beforeAll(async () => {
     try { await pub.getChainId(); break; } catch { await Bun.sleep(100); }
   }
   const registry = await deploy("SignerRegistry", [account.address]);
-  const oracle = await deploy("AssayOracle", [registry]);
-  escrow = await deploy("AssayEscrow", ["0x0000000000000000000000000000000000000001", oracle]);
-  validator = await deploy("AssayValidator", [
+  const oracle = await deploy("CountersignOracle", [registry]);
+  escrow = await deploy("CountersignEscrow", ["0x0000000000000000000000000000000000000001", oracle]);
+  validator = await deploy("CountersignValidator", [
     "0x0000000000000000000000000000000000000002", "0x0000000000000000000000000000000000000003", escrow, "https://n/escrows/", account.address,
   ]);
 }, 30_000);

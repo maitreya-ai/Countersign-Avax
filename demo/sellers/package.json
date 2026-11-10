@@ -1,14 +1,14 @@
 {
-  "name": "@assay/sellers",
+  "name": "@countersign/sellers",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "bun run src/index.ts"
   },
   "dependencies": {
-    "@assay/x402": "workspace:*",
-    "@assay/core": "workspace:*",
-    "@assay/agent": "workspace:*",
+    "@countersign/x402": "workspace:*",
+    "@countersign/core": "workspace:*",
+    "@countersign/agent": "workspace:*",
     "viem": "^2.21.0"
   },
   "main": "src/index.ts"

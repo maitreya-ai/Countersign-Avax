@@ -5,7 +5,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {SignerRegistry} from "./SignerRegistry.sol";
 
-/// @title AssayOracle
+/// @title CountersignOracle
 /// @notice Verifies that each judge verdict was signed by a registered judge key over the exact
 ///         model request and response bytes, then applies a quorum policy. Pure verification:
 ///         no owner, no state.
@@ -28,7 +28,7 @@ import {SignerRegistry} from "./SignerRegistry.sol";
 /// The header is located inside the response JSON (`"content":"VERDICT:...`), and the request
 /// body must contain both escrow hashes, so a genuine signature over a verdict for a different
 /// escrow fails on the hash checks rather than on the signature.
-contract AssayOracle {
+contract CountersignOracle {
     using ECDSA for bytes32;
 
     struct Attested {

@@ -3,12 +3,12 @@ pragma solidity ^0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {AssayEscrow} from "./AssayEscrow.sol";
+import {CountersignEscrow} from "./CountersignEscrow.sol";
 import {IIdentityRegistry, IValidationRegistry} from "./interfaces/IERC8004.sol";
 
-/// @title AssayValidator
+/// @title CountersignValidator
 /// @notice Turns judged escrows into ERC-8004 validation records for the seller's agent identity.
-///         It never re-checks the verdict bundle (AssayEscrow already did); it reads the escrow's
+///         It never re-checks the verdict bundle (CountersignEscrow already did); it reads the escrow's
 ///         final `reason`, which needs no trust.
 ///
 ///         Scores: VerdictYes -> 100. VerdictNo or Equivocation -> 0. Arbiter decisions, deadline
@@ -23,13 +23,13 @@ import {IIdentityRegistry, IValidationRegistry} from "./interfaces/IERC8004.sol"
 ///         it can no longer hide its failures by not filing. Buyers check that approval before
 ///         trusting a seller's record (see `canSelfFile`). Without the approval, `record` only works
 ///         if the seller filed the request itself.
-contract AssayValidator is Ownable {
-    string public constant TAG = "assay";
-    bytes32 public constant VALIDATION_TAG = keccak256("assay.validation.v1");
+contract CountersignValidator is Ownable {
+    string public constant TAG = "countersign";
+    bytes32 public constant VALIDATION_TAG = keccak256("countersign.validation.v1");
 
     IValidationRegistry public immutable validation;
     IIdentityRegistry public immutable identity;
-    AssayEscrow public immutable escrow;
+    CountersignEscrow public immutable escrow;
 
     /// @notice Prefix of the request/response URI, e.g. "https://node.example/escrows/"
     string public baseURI;
@@ -45,7 +45,7 @@ contract AssayValidator is Ownable {
     error AgentNotPayee(uint256 agentId, address owner, address payee);
     error RequestMismatch(address validator, uint256 agentId);
 
-    constructor(IValidationRegistry validation_, IIdentityRegistry identity_, AssayEscrow escrow_, string memory baseURI_, address owner_)
+    constructor(IValidationRegistry validation_, IIdentityRegistry identity_, CountersignEscrow escrow_, string memory baseURI_, address owner_)
         Ownable(owner_)
     {
         validation = validation_;
@@ -65,9 +65,9 @@ contract AssayValidator is Ownable {
     }
 
     /// @notice Score for a final reason; `judged` is false for outcomes that are never recorded.
-    function scoreOf(AssayEscrow.Reason reason) public pure returns (bool judged, uint8 score) {
-        if (reason == AssayEscrow.Reason.VerdictYes) return (true, 100);
-        if (reason == AssayEscrow.Reason.VerdictNo || reason == AssayEscrow.Reason.Equivocation) return (true, 0);
+    function scoreOf(CountersignEscrow.Reason reason) public pure returns (bool judged, uint8 score) {
+        if (reason == CountersignEscrow.Reason.VerdictYes) return (true, 100);
+        if (reason == CountersignEscrow.Reason.VerdictNo || reason == CountersignEscrow.Reason.Equivocation) return (true, 0);
         return (false, 0);
     }
 
@@ -84,7 +84,7 @@ contract AssayValidator is Ownable {
     /// @notice Record a final, judged escrow in the seller's ERC-8004 validation history. Anyone may call.
     function record(bytes32 escrowId) external returns (uint8 score) {
         if (recorded[escrowId]) revert AlreadyRecorded();
-        AssayEscrow.Escrow memory e = escrow.get(escrowId);
+        CountersignEscrow.Escrow memory e = escrow.get(escrowId);
         if (e.agentId == escrow.NO_AGENT()) revert NoAgent();
         (bool judged, uint8 s) = scoreOf(e.reason);
         if (!judged) revert NotJudged();

@@ -1,4 +1,4 @@
-// Keeper: watches AssayEscrow, commits evidence that arrives with a valid seller receipt, proves
+// Keeper: watches CountersignEscrow, commits evidence that arrives with a valid seller receipt, proves
 // equivocation when two different signed receipts exist, judges and settles, writes the ERC-8004
 // validation record, and refunds buyers after the deadline. Every action is permissionless on-chain;
 // the keeper only saves the buyer and seller the gas and the bookkeeping.
@@ -6,8 +6,8 @@
 import { readFileSync } from "node:fs";
 import { keccak256, parseEventLogs, toBytes, type Hex } from "viem";
 import { buildBundle, publicClient, registerSignersFor, settleArgs, toAttestedArg, type Bundle } from "./judgeKit";
-import { escrowAbi, oracleAbi, readEscrow, validatorAbi, verifyReceipt, NO_AGENT } from "@assay/x402";
-import { HEADER_LEN, parseHeader } from "@assay/core";
+import { escrowAbi, oracleAbi, readEscrow, validatorAbi, verifyReceipt, NO_AGENT } from "@countersign/x402";
+import { HEADER_LEN, parseHeader } from "@countersign/core";
 import { cfg, reason, send } from "./ctx";
 import { store, type EscrowRow } from "./store";
 

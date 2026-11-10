@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
-  transpilePackages: ["@assay/x402", "@assay/core"],
+  transpilePackages: ["@countersign/x402", "@countersign/core"],
   turbopack: {
     rules: {
       "*.css": {

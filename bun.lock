@@ -3,10 +3,10 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "assay",
+      "name": "countersign",
       "dependencies": {
-        "@assay/core": "workspace:*",
-        "@assay/x402": "workspace:*",
+        "@countersign/core": "workspace:*",
+        "@countersign/x402": "workspace:*",
         "viem": "^2.21.0",
       },
       "devDependencies": {
@@ -15,52 +15,52 @@
       },
     },
     "demo/agent": {
-      "name": "@assay/agent",
+      "name": "@countersign/agent",
       "dependencies": {
-        "@assay/core": "workspace:*",
-        "@assay/x402": "workspace:*",
+        "@countersign/core": "workspace:*",
+        "@countersign/x402": "workspace:*",
         "viem": "^2.21.0",
       },
     },
     "demo/sellers": {
-      "name": "@assay/sellers",
+      "name": "@countersign/sellers",
       "dependencies": {
-        "@assay/agent": "workspace:*",
-        "@assay/core": "workspace:*",
-        "@assay/x402": "workspace:*",
+        "@countersign/agent": "workspace:*",
+        "@countersign/core": "workspace:*",
+        "@countersign/x402": "workspace:*",
         "viem": "^2.21.0",
       },
     },
     "packages/core": {
-      "name": "@assay/core",
+      "name": "@countersign/core",
       "dependencies": {
-        "@assay/x402": "workspace:*",
+        "@countersign/x402": "workspace:*",
         "viem": "^2.21.0",
       },
     },
-    "packages/x402-assay": {
-      "name": "@assay/x402",
+    "packages/x402-countersign": {
+      "name": "@countersign/x402",
       "version": "0.1.0",
       "dependencies": {
         "viem": "^2.21.0",
       },
     },
     "services/node": {
-      "name": "@assay/node",
+      "name": "@countersign/node",
       "dependencies": {
-        "@assay/agent": "workspace:*",
-        "@assay/core": "workspace:*",
-        "@assay/sellers": "workspace:*",
-        "@assay/x402": "workspace:*",
+        "@countersign/agent": "workspace:*",
+        "@countersign/core": "workspace:*",
+        "@countersign/sellers": "workspace:*",
+        "@countersign/x402": "workspace:*",
         "viem": "^2.21.0",
       },
     },
     "web": {
-      "name": "@assay/web",
+      "name": "@countersign/web",
       "version": "0.1.0",
       "dependencies": {
-        "@assay/core": "workspace:*",
-        "@assay/x402": "workspace:*",
+        "@countersign/core": "workspace:*",
+        "@countersign/x402": "workspace:*",
         "next": "16.4.6",
         "react": "19.3.0",
         "react-dom": "19.3.0",
@@ -84,17 +84,17 @@
 
     "@alloc/quick-lru": ["@alloc/quick-lru@5.3.0", "", {}, "sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA=="],
 
-    "@assay/agent": ["@assay/agent@workspace:demo/agent"],
+    "@countersign/agent": ["@countersign/agent@workspace:demo/agent"],
 
-    "@assay/core": ["@assay/core@workspace:packages/core"],
+    "@countersign/core": ["@countersign/core@workspace:packages/core"],
 
-    "@assay/node": ["@assay/node@workspace:services/node"],
+    "@countersign/node": ["@countersign/node@workspace:services/node"],
 
-    "@assay/sellers": ["@assay/sellers@workspace:demo/sellers"],
+    "@countersign/sellers": ["@countersign/sellers@workspace:demo/sellers"],
 
-    "@assay/web": ["@assay/web@workspace:web"],
+    "@countersign/web": ["@countersign/web@workspace:web"],
 
-    "@assay/x402": ["@assay/x402@workspace:packages/x402-assay"],
+    "@countersign/x402": ["@countersign/x402@workspace:packages/x402-countersign"],
 
     "@emnapi/runtime": ["@emnapi/runtime@1.11.3", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA=="],
 

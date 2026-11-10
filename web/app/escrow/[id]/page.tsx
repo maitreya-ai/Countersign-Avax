@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { EscrowDetail } from "@/components/escrow-detail";
 import { Container } from "@/components/ui";
 
-export const metadata = { title: "Purchase · Assay" };
+export const metadata = { title: "Purchase · Countersign" };
 
 async function Detail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

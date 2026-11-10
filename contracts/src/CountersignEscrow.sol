@@ -6,17 +6,17 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
-import {AssayOracle} from "./AssayOracle.sol";
+import {CountersignOracle} from "./CountersignOracle.sol";
 import {IERC3009} from "./interfaces/IERC3009.sol";
 
-/// @title AssayEscrow
+/// @title CountersignEscrow
 /// @notice Holds a USDC payment until a quorum of signed LLM judges decides whether the seller's
 ///         delivery met the promise (the rubric). The oracle re-checks every signature against the
 ///         exact request/response bytes, so no keeper, relayer or facilitator is trusted with funds.
 ///
 ///         Two ways in:
 ///         - `open`: the payer approves and calls it directly.
-///         - `openWithAuthorization`: the x402 `assay` scheme. The buyer signs one gasless EIP-3009
+///         - `openWithAuthorization`: the x402 `countersign` scheme. The buyer signs one gasless EIP-3009
 ///           `ReceiveWithAuthorization` whose nonce IS the hash of the escrow terms. USDC only lets
 ///           `to` (this contract) redeem it, so nobody can front-run it, and changing any term
 ///           changes the nonce and breaks the USDC signature check.
@@ -24,12 +24,12 @@ import {IERC3009} from "./interfaces/IERC3009.sol";
 ///         The seller signs an EIP-712 receipt for the evidence it served. Evidence is accepted only
 ///         with that signature, and a second, different signed receipt is a proof of equivocation
 ///         that refunds the buyer.
-contract AssayEscrow is ReentrancyGuard, EIP712 {
+contract CountersignEscrow is ReentrancyGuard, EIP712 {
     using SafeERC20 for IERC20;
 
     enum State { None, Open, Resolved, Refunded, Escalated }
 
-    /// @notice Why an escrow ended. Read by AssayValidator to score the seller.
+    /// @notice Why an escrow ended. Read by CountersignValidator to score the seller.
     enum Reason { None, VerdictYes, VerdictNo, ArbiterRelease, ArbiterRefund, DeadlineRefund, Equivocation }
 
     struct Escrow {
@@ -40,7 +40,7 @@ contract AssayEscrow is ReentrancyGuard, EIP712 {
         uint64 deadline;        // unix seconds; after it, anyone may refund the payer if not final
         bytes32 rubricHash;     // keccak256(bytes(rubric))
         bytes32 evidenceHash;   // keccak256(bytes(evidence)), set once
-        AssayOracle.Policy policy;
+        CountersignOracle.Policy policy;
         State state;
         Reason reason;
         uint256 agentId;        // payee's ERC-8004 agent id, signed into the terms; NO_AGENT = none
@@ -63,11 +63,11 @@ contract AssayEscrow is ReentrancyGuard, EIP712 {
     }
 
     uint256 public constant NO_AGENT = type(uint256).max;
-    bytes32 public constant TERMS_TAG = keccak256("assay.terms.v1");
+    bytes32 public constant TERMS_TAG = keccak256("countersign.terms.v1");
     bytes32 public constant RECEIPT_TYPEHASH = keccak256("Receipt(bytes32 escrowId,bytes32 evidenceHash)");
 
     IERC20 public immutable usdc;
-    AssayOracle public immutable oracle;
+    CountersignOracle public immutable oracle;
     uint256 public nonce;
     mapping(bytes32 => Escrow) public escrows;
 
@@ -92,7 +92,7 @@ contract AssayEscrow is ReentrancyGuard, EIP712 {
     error BadReceipt();
     error NotEquivocation();
 
-    constructor(IERC20 usdc_, AssayOracle oracle_) EIP712("AssayEscrow", "1") {
+    constructor(IERC20 usdc_, CountersignOracle oracle_) EIP712("CountersignEscrow", "1") {
         usdc = usdc_;
         oracle = oracle_;
     }
@@ -106,7 +106,7 @@ contract AssayEscrow is ReentrancyGuard, EIP712 {
         uint96 amount,
         uint64 deadline,
         bytes32 rubricHash,
-        AssayOracle.Policy memory policy,
+        CountersignOracle.Policy memory policy,
         uint256 agentId,
         bytes32 salt
     ) public view returns (bytes32) {
@@ -132,7 +132,7 @@ contract AssayEscrow is ReentrancyGuard, EIP712 {
         uint96 amount,
         uint64 deadline,
         string calldata rubric,
-        AssayOracle.Policy calldata policy
+        CountersignOracle.Policy calldata policy
     ) external nonReentrant returns (bytes32 id) {
         _checkPolicy(policy);
         if (deadline <= block.timestamp) revert DeadlinePassed();
@@ -146,7 +146,7 @@ contract AssayEscrow is ReentrancyGuard, EIP712 {
     /// @notice Open an escrow from the buyer's gasless EIP-3009 authorisation. Anyone may submit it
     ///         (normally the seller's x402 middleware or a facilitator); the terms are exactly what
     ///         the buyer signed, because they are the nonce.
-    function openWithAuthorization(OpenAuth calldata a, string calldata rubric, AssayOracle.Policy calldata policy)
+    function openWithAuthorization(OpenAuth calldata a, string calldata rubric, CountersignOracle.Policy calldata policy)
         external
         nonReentrant
         returns (bytes32 id)
@@ -208,9 +208,9 @@ contract AssayEscrow is ReentrancyGuard, EIP712 {
     /// @notice Submit a verdict bundle. Reverts if any attestation is invalid for this escrow.
     function settle(
         bytes32 id,
-        AssayOracle.Attested[] calldata judges,
-        AssayOracle.Attested calldata grounding,
-        AssayOracle.Attested calldata calibration,
+        CountersignOracle.Attested[] calldata judges,
+        CountersignOracle.Attested calldata grounding,
+        CountersignOracle.Attested calldata calibration,
         string[] calldata requestIds
     ) external nonReentrant {
         Escrow storage e = escrows[id];
@@ -269,7 +269,7 @@ contract AssayEscrow is ReentrancyGuard, EIP712 {
 
     // ---- internal ------------------------------------------------------------
 
-    function _checkPolicy(AssayOracle.Policy calldata policy) private pure {
+    function _checkPolicy(CountersignOracle.Policy calldata policy) private pure {
         if (policy.judges == 0 || policy.minAgree == 0 || policy.minAgree > policy.judges || policy.minConfBps > 10000) {
             revert BadPolicy();
         }
@@ -283,7 +283,7 @@ contract AssayEscrow is ReentrancyGuard, EIP712 {
         uint96 amount,
         uint64 deadline,
         bytes32 rubricHash,
-        AssayOracle.Policy calldata policy,
+        CountersignOracle.Policy calldata policy,
         uint256 agentId
     ) private {
         escrows[id] = Escrow({

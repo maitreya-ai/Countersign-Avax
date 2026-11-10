@@ -2,7 +2,7 @@
 //   bun run scripts/check-env.ts
 import { createPublicClient, formatEther, http, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { usdcAbi } from "@assay/x402";
+import { usdcAbi } from "@countersign/x402";
 
 const rpc = process.env.RPC_URL!;
 const client = createPublicClient({ transport: http(rpc) });
@@ -18,7 +18,7 @@ for (const k of ["DEPLOYER", "AGENT", "SELLER_HONEST", "SELLER_LAZY", "SELLER_IN
   ]);
   console.log(`  ${k.padEnd(16)} ${a}  ${Number(formatEther(avax)).toFixed(4)} AVAX  ${(Number(u) / 1e6).toFixed(2)} USDC`);
 }
-const need = ["ASSAY_ESCROW", "ASSAY_ORACLE", "SIGNER_REGISTRY", "ASSAY_VALIDATOR"];
+const need = ["COUNTERSIGN_ESCROW", "COUNTERSIGN_ORACLE", "SIGNER_REGISTRY", "COUNTERSIGN_VALIDATOR"];
 for (const k of need) if (!process.env[k]) console.log(`  ${k} not set (run scripts/deploy.ts)`);
 const judges = [process.env.JUDGE_A, process.env.JUDGE_B, process.env.GROUNDING, process.env.CALIBRATION];
 if (judges.some((m) => m?.startsWith("groq:")) && !process.env.GROQ_API_KEY) console.log("  GROQ_API_KEY not set (judges use groq:)");

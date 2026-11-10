@@ -13,9 +13,9 @@ const LINKS = [
 
 export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2" aria-label="Assay home">
-      <span className="grid h-10 w-10 place-items-center border-[3px] border-black bg-yellow font-display text-xl font-extrabold shadow-nb-sm">A</span>
-      <span className="font-display text-2xl font-extrabold tracking-tight">assay</span>
+    <Link href="/" className="flex items-center gap-2" aria-label="Countersign home">
+      <span className="grid h-10 w-10 place-items-center border-[3px] border-black bg-yellow font-display text-xl font-extrabold shadow-nb-sm">C</span>
+      <span className="font-display text-2xl font-extrabold tracking-tight">countersign</span>
     </Link>
   );
 }

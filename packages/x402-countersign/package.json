@@ -1,7 +1,7 @@
 {
-  "name": "@assay/x402",
+  "name": "@countersign/x402",
   "version": "0.1.0",
-  "description": "x402 'assay' payment scheme: pay into an escrow that settles only on verified LLM verdicts (Avalanche).",
+  "description": "x402 'countersign' payment scheme: pay into an escrow that settles only on verified LLM verdicts (Avalanche).",
   "license": "MIT",
   "type": "module",
   "main": "src/index.ts",

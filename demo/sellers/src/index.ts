@@ -1,4 +1,4 @@
-// Demo sellers: one Bun server, four paid /summarize APIs, each behind the x402 `assay` scheme with
+// Demo sellers: one Bun server, four paid /summarize APIs, each behind the x402 `countersign` scheme with
 // its own key and ERC-8004 agent id.
 //
 //   honest   : five bullets, each a sentence from the source               -> YES, paid, record 100
@@ -11,8 +11,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { privateKeyToAccount } from "viem/accounts";
 import type { Address, Hex } from "viem";
-import { CORS_HEADERS, assayRoute, buildEvidence, type Policy } from "@assay/x402";
-import { CHAIN_ID, addresses, usdcUnits } from "@assay/core";
+import { CORS_HEADERS, countersignRoute, buildEvidence, type Policy } from "@countersign/x402";
+import { CHAIN_ID, addresses, usdcUnits } from "@countersign/core";
 
 export const RUBRIC =
   "Exactly 5 bullets. Every bullet is supported by a sentence in the source document. No facts that are not in the source.";
@@ -107,7 +107,7 @@ export function sellerRoutes(): Map<string, (req: Request) => Promise<Response>>
     const seller = privateKeyToAccount(keyFor(mode));
     const agentId = agentIdFor(mode, seller.address);
     const behaviour = mode === "honest" ? honest : mode === "lazy" ? lazy : mode === "injector" ? injector : lazy;
-    routes.set(`/${mode}/summarize`, assayRoute({
+    routes.set(`/${mode}/summarize`, countersignRoute({
       chainId: CHAIN_ID,
       usdc: addresses.usdc,
       escrow: addresses.escrow,

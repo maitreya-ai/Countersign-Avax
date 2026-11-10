@@ -21,7 +21,7 @@ const STEPS = [
   {
     n: "03",
     title: "Two models judge, the contract checks",
-    body: "Two different LLMs, a grounding check and a calibration pass each sign their verdict. AssayOracle re-hashes every byte with sha256 and recovers each signer with ecrecover.",
+    body: "Two different LLMs, a grounding check and a calibration pass each sign their verdict. CountersignOracle re-hashes every byte with sha256 and recovers each signer with ecrecover.",
     tag: "on-chain",
     color: "bg-green",
   },
@@ -63,7 +63,7 @@ export default function Home() {
               Agents only pay for work that <span className="bg-yellow px-2 shadow-nb-sm">passes.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed">
-              Assay is a new x402 payment option. The agent's USDC is held until two LLM judges check the response
+              Countersign is a new x402 payment option. The agent's USDC is held until two LLM judges check the response
               against the seller's promise. The contract then verifies their signed verdicts itself and pays or refunds.
               Every outcome becomes the seller's verifiable ERC-8004 track record.
             </p>
@@ -90,7 +90,7 @@ export default function Home() {
                 </div>
                 <div className="border-[3px] border-black bg-green p-3 shadow-nb-sm">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-sm font-bold">scheme: assay</span>
+                    <span className="font-mono text-sm font-bold">scheme: countersign</span>
                     <span className="font-mono text-xs">0.25 USDC</span>
                   </div>
                   <p className="mt-1 font-mono text-[11px] leading-snug">
@@ -150,7 +150,7 @@ export default function Home() {
               </ul>
             </Card>
             <Card className="bg-green p-6">
-              <Badge className="bg-card">scheme: assay</Badge>
+              <Badge className="bg-card">scheme: countersign</Badge>
               <ul className="mt-4 space-y-2 text-sm font-medium">
                 <li>✓ USDC is held until the work is verified</li>
                 <li>✓ Judged against the seller&apos;s own promise, from the exact bytes served</li>
@@ -180,7 +180,7 @@ export default function Home() {
             <Card className="flex flex-col justify-between bg-yellow p-6">
               <h3 className="font-heading text-xl font-bold">Sellers need no gas. Agents need no AVAX.</h3>
               <p className="mt-2 text-sm">
-                The Assay node acts as the x402 facilitator and keeper. It can&apos;t move money anywhere the agent
+                The Countersign node acts as the x402 facilitator and keeper. It can&apos;t move money anywhere the agent
                 didn&apos;t sign for, and every step is permissionless on-chain.
               </p>
               <Link href="/protocol" className="nb-btn nb-btn-sm mt-4 self-start bg-card">See the wire format →</Link>

@@ -3,7 +3,7 @@
 // attestation, recovers the EIP-191 signer, checks SignerRegistry, and parses each verdict header.
 
 import { decodeFunctionData, hexToBytes, recoverMessageAddress, type Address, type Hex, type PublicClient } from "viem";
-import { escrowAbi, registryAbi } from "@assay/x402";
+import { escrowAbi, registryAbi } from "@countersign/x402";
 import { parseHeader } from "./header";
 
 export interface CheckedAttestation {

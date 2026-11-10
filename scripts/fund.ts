@@ -3,7 +3,7 @@
 //   bun run scripts/fund.ts [agentUsdc=5]
 import { createPublicClient, createWalletClient, formatEther, http, parseEther, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { usdcAbi } from "@assay/x402";
+import { usdcAbi } from "@countersign/x402";
 
 const rpc = process.env.RPC_URL!;
 const client = createPublicClient({ transport: http(rpc) });

@@ -18,7 +18,7 @@ export const HEADERS = {
   required: "PAYMENT-REQUIRED",
   signature: "PAYMENT-SIGNATURE",
   response: "PAYMENT-RESPONSE",
-  receipt: "X-ASSAY-RECEIPT",
+  receipt: "X-COUNTERSIGN-RECEIPT",
 } as const;
 
 /** CORS headers a seller should send so browser agents can pay and read receipts. */
@@ -26,5 +26,5 @@ export const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT",
-  "Access-Control-Expose-Headers": "PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-ASSAY-RECEIPT",
+  "Access-Control-Expose-Headers": "PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-COUNTERSIGN-RECEIPT",
 };

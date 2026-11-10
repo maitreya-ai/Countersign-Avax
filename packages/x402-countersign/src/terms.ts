@@ -1,11 +1,11 @@
-// Off-chain mirrors of AssayEscrow.termsHash / escrowIdFor and AssayValidator.requestHashFor.
+// Off-chain mirrors of CountersignEscrow.termsHash / escrowIdFor and CountersignValidator.requestHashFor.
 // Parity with the contracts is tested against a local chain (test/parity.test.ts).
 
 import { encodeAbiParameters, keccak256, maxUint256, toHex, type Address, type Hex } from "viem";
 import type { Policy } from "./types";
 
-export const TERMS_TAG = keccak256(toHex("assay.terms.v1"));
-export const VALIDATION_TAG = keccak256(toHex("assay.validation.v1"));
+export const TERMS_TAG = keccak256(toHex("countersign.terms.v1"));
+export const VALIDATION_TAG = keccak256(toHex("countersign.validation.v1"));
 export const NO_AGENT = maxUint256;
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
 

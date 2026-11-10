@@ -1,4 +1,4 @@
-// SQLite state for the assay node: an index of on-chain escrows plus the off-chain bytes
+// SQLite state for the countersign node: an index of on-chain escrows plus the off-chain bytes
 // (evidence, judge attestations) that the chain only stores as hashes.
 
 import { Database } from "bun:sqlite";

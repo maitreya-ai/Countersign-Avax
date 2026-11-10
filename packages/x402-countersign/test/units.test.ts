@@ -7,7 +7,7 @@ import { parseAgentId, NO_AGENT } from "../src/terms";
 describe("evidence", () => {
   test("exact layout, no trailing newline, path without query", () => {
     const e = buildEvidence({ method: "post", path: "/honest/summarize?x=1", requestBody: '{"a":1}', status: 200, responseBody: '{"b":2}' });
-    expect(e.text).toBe('ASSAY-EVIDENCE v1\nREQUEST POST /honest/summarize\n{"a":1}\n\nRESPONSE 200\n{"b":2}');
+    expect(e.text).toBe('COUNTERSIGN-EVIDENCE v1\nREQUEST POST /honest/summarize\n{"a":1}\n\nRESPONSE 200\n{"b":2}');
     expect(e.hash).toBe(keccak256(toBytes(e.text)));
   });
 

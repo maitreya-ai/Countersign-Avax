@@ -1,9 +1,9 @@
 import type { Address, Hex } from "viem";
 
-/** x402 scheme id for payments held in AssayEscrow until verified LLM judges decide. */
-export const SCHEME = "assay" as const;
-export const EVIDENCE_FORMAT = "assay-evidence-v1" as const;
-export const VALIDATION_TAG_STRING = "assay" as const;
+/** x402 scheme id for payments held in CountersignEscrow until verified LLM judges decide. */
+export const SCHEME = "countersign" as const;
+export const EVIDENCE_FORMAT = "countersign-evidence-v1" as const;
+export const VALIDATION_TAG_STRING = "countersign" as const;
 
 export interface Policy {
   judges: number;          // judge attestations required (distinct models)
@@ -12,8 +12,8 @@ export interface Policy {
   requireGrounded: boolean;
 }
 
-/** `extra` of an `assay` PaymentRequirements entry. */
-export interface AssayExtra {
+/** `extra` of an `countersign` PaymentRequirements entry. */
+export interface CountersignExtra {
   name: string;            // USDC EIP-712 domain name ("USD Coin" on Avalanche)
   version: string;         // USDC EIP-712 domain version ("2")
   escrow: Address;
@@ -22,10 +22,10 @@ export interface AssayExtra {
   deadlineSeconds: number; // escrow deadline = signing time + this
   arbiter: Address;        // 0x0 = none (escalations end in a deadline refund)
   agentId: string | null;  // seller's ERC-8004 agent id (decimal string), signed into the terms
-  validator?: Address;     // AssayValidator writing the seller's ERC-8004 record
+  validator?: Address;     // CountersignValidator writing the seller's ERC-8004 record
   identityRegistry?: Address;
   validationRegistry?: Address;
-  facilitator?: string;    // assay node: opens escrows, accepts evidence, judges, settles
+  facilitator?: string;    // countersign node: opens escrows, accepts evidence, judges, settles
   evidence: { format: typeof EVIDENCE_FORMAT; maxRequestBytes: number; maxResponseBytes: number };
 }
 
@@ -64,9 +64,9 @@ export interface ExactPayload {
   payload: { signature: Hex; authorization: Authorization };
 }
 
-export interface AssayPayload {
+export interface CountersignPayload {
   x402Version: 2;
-  accepted: PaymentRequirements<AssayExtra>;
+  accepted: PaymentRequirements<CountersignExtra>;
   payload: {
     signature: Hex;        // EIP-712 ReceiveWithAuthorization, to = escrow, nonce = termsHash
     authorization: Authorization;
@@ -75,10 +75,10 @@ export interface AssayPayload {
   };
 }
 
-export type PaymentPayload = ExactPayload | AssayPayload;
+export type PaymentPayload = ExactPayload | CountersignPayload;
 
-/** Seller-signed receipt for what it served (header X-ASSAY-RECEIPT, base64 JSON). */
-export interface AssayReceipt {
+/** Seller-signed receipt for what it served (header X-COUNTERSIGN-RECEIPT, base64 JSON). */
+export interface CountersignReceipt {
   escrowId: Hex;
   evidenceHash: Hex;
   signature: Hex;

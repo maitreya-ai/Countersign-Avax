@@ -1,6 +1,6 @@
-// Evidence format `assay-evidence-v1`: the exact bytes the judges see and the seller signs.
+// Evidence format `countersign-evidence-v1`: the exact bytes the judges see and the seller signs.
 //
-//   ASSAY-EVIDENCE v1
+//   COUNTERSIGN-EVIDENCE v1
 //   REQUEST <METHOD> <PATH>
 //   <request body, verbatim>
 //
@@ -32,7 +32,7 @@ function text(b: Uint8Array | string, what: string): string {
 
 export function buildEvidence(e: EvidenceInput): { text: string; hash: Hex } {
   const path = e.path.split("?")[0]!;
-  const t = `ASSAY-EVIDENCE v1\nREQUEST ${e.method.toUpperCase()} ${path}\n${text(e.requestBody, "request body")}\n\nRESPONSE ${e.status}\n${text(e.responseBody, "response body")}`;
+  const t = `COUNTERSIGN-EVIDENCE v1\nREQUEST ${e.method.toUpperCase()} ${path}\n${text(e.requestBody, "request body")}\n\nRESPONSE ${e.status}\n${text(e.responseBody, "response body")}`;
   return { text: t, hash: evidenceHashOf(t) };
 }
 

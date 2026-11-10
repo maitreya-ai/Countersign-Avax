@@ -8,10 +8,10 @@ export function Footer() {
   const { cfg } = useConfig();
   const c = cfg?.contracts;
   const rows: [string, string | null | undefined][] = [
-    ["AssayEscrow", c?.escrow],
-    ["AssayOracle", c?.oracle],
+    ["CountersignEscrow", c?.escrow],
+    ["CountersignOracle", c?.oracle],
     ["SignerRegistry", c?.signerRegistry],
-    ["AssayValidator", c?.validator],
+    ["CountersignValidator", c?.validator],
     ["ERC-8004 Identity", c?.identityRegistry],
     ["ERC-8004 Validation", c?.validationRegistry],
     ["USDC (Circle)", c?.usdc],

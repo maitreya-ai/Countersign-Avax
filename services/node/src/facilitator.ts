@@ -1,14 +1,14 @@
 // x402 facilitator for Avalanche: /facilitator/verify and /facilitator/settle for
 //   - `exact`: EIP-3009 transferWithAuthorization (local, the node pays gas; or forwarded to PayAI)
-//   - `assay`: AssayEscrow.openWithAuthorization (the node pays gas; it can never redirect funds,
+//   - `countersign`: CountersignEscrow.openWithAuthorization (the node pays gas; it can never redirect funds,
 //              because the escrow terms are the buyer-signed nonce)
 
 import { parseEventLogs, type Address, type Hex } from "viem";
 import {
   escrowAbi, escrowIdFor, parseAgentId, rubricHashOf, splitSig, termsHash, usdcAbi, usdcDomain, verifyAuthorization,
-  type AssayExtra, type AssayPayload, type ExactPayload, type PaymentRequirements, type SettleResponse, type VerifyResponse,
-} from "@assay/x402";
-import { publicClient } from "@assay/core";
+  type CountersignExtra, type CountersignPayload, type ExactPayload, type PaymentRequirements, type SettleResponse, type VerifyResponse,
+} from "@countersign/x402";
+import { publicClient } from "@countersign/core";
 import { cfg, reason, send } from "./ctx";
 import { store } from "./store";
 
@@ -62,9 +62,9 @@ async function payai(path: "verify" | "settle", body: unknown) {
   return res.json();
 }
 
-// ---- assay ------------------------------------------------------------------------
+// ---- countersign ------------------------------------------------------------------------
 
-function assayTerms(p: AssayPayload, req: PaymentRequirements<AssayExtra>) {
+function countersignTerms(p: CountersignPayload, req: PaymentRequirements<CountersignExtra>) {
   const a = p.payload.authorization;
   const x = req.extra;
   const nonce = termsHash({
@@ -75,7 +75,7 @@ function assayTerms(p: AssayPayload, req: PaymentRequirements<AssayExtra>) {
   return { nonce, escrowId: escrowIdFor(a.from, nonce) };
 }
 
-async function verifyAssay(p: AssayPayload, req: PaymentRequirements<AssayExtra>): Promise<VerifyResponse> {
+async function verifyCountersign(p: CountersignPayload, req: PaymentRequirements<CountersignExtra>): Promise<VerifyResponse> {
   const a = p?.payload?.authorization;
   if (!a || !p.payload.signature || !p.payload.salt || !p.payload.deadline) return { isValid: false, invalidReason: "invalid_payload" };
   if (req.network !== cfg.network || req.asset.toLowerCase() !== cfg.usdc.toLowerCase()) return { isValid: false, invalidReason: "invalid_network" };
@@ -84,7 +84,7 @@ async function verifyAssay(p: AssayPayload, req: PaymentRequirements<AssayExtra>
   }
   if (BigInt(a.value) < BigInt(req.amount)) return { isValid: false, invalidReason: "insufficient_amount" };
   if (BigInt(p.payload.deadline) <= nowSec()) return { isValid: false, invalidReason: "deadline_passed" };
-  const { nonce } = assayTerms(p, req);
+  const { nonce } = countersignTerms(p, req);
   if (nonce.toLowerCase() !== a.nonce.toLowerCase()) return { isValid: false, invalidReason: "terms_mismatch" };
   const domain = usdcDomain(cfg.chainId, cfg.usdc, req.extra.name, req.extra.version);
   if (!(await verifyAuthorization("receive", domain, a, p.payload.signature))) return { isValid: false, invalidReason: "invalid_signature" };
@@ -92,12 +92,12 @@ async function verifyAssay(p: AssayPayload, req: PaymentRequirements<AssayExtra>
   return err ? { isValid: false, invalidReason: err } : { isValid: true, payer: a.from };
 }
 
-async function settleAssay(p: AssayPayload, req: PaymentRequirements<AssayExtra>): Promise<SettleResponse> {
-  const v = await verifyAssay(p, req);
+async function settleCountersign(p: CountersignPayload, req: PaymentRequirements<CountersignExtra>): Promise<SettleResponse> {
+  const v = await verifyCountersign(p, req);
   if (!v.isValid) return { success: false, network: cfg.network, errorReason: v.invalidReason };
   const a = p.payload.authorization;
   const x = req.extra;
-  const { escrowId } = assayTerms(p, req);
+  const { escrowId } = countersignTerms(p, req);
   const { v: sv, r, s } = splitSig(p.payload.signature);
   try {
     const { hash, receipt } = await send({
@@ -129,7 +129,7 @@ async function settleAssay(p: AssayPayload, req: PaymentRequirements<AssayExtra>
 export async function facilitatorVerify(body: any): Promise<VerifyResponse> {
   const { paymentPayload: p, paymentRequirements: req } = body ?? {};
   if (!p || !req) return { isValid: false, invalidReason: "invalid_request" };
-  if (req.scheme === "assay") return verifyAssay(p, req);
+  if (req.scheme === "countersign") return verifyCountersign(p, req);
   if (req.scheme === "exact") return cfg.exactFacilitator === "payai" ? payai("verify", body) : verifyExact(p, req);
   return { isValid: false, invalidReason: "unsupported_scheme" };
 }
@@ -137,7 +137,7 @@ export async function facilitatorVerify(body: any): Promise<VerifyResponse> {
 export async function facilitatorSettle(body: any): Promise<SettleResponse> {
   const { paymentPayload: p, paymentRequirements: req } = body ?? {};
   if (!p || !req) return { success: false, network: cfg.network, errorReason: "invalid_request" };
-  if (req.scheme === "assay") return settleAssay(p, req);
+  if (req.scheme === "countersign") return settleCountersign(p, req);
   if (req.scheme === "exact") return cfg.exactFacilitator === "payai" ? payai("settle", body) : settleExact(p, req);
   return { success: false, network: cfg.network, errorReason: "unsupported_scheme" };
 }
@@ -146,7 +146,7 @@ export function supported() {
   return {
     kinds: [
       { x402Version: 2, scheme: "exact", network: cfg.network },
-      { x402Version: 2, scheme: "assay", network: cfg.network, extra: { escrow: cfg.escrow } },
+      { x402Version: 2, scheme: "countersign", network: cfg.network, extra: { escrow: cfg.escrow } },
     ],
   };
 }

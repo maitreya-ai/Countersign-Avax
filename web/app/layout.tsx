@@ -11,7 +11,7 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const mono = Space_Mono({ variable: "--font-space-mono", subsets: ["latin"], weight: ["400", "700"] });
 
 export const metadata: Metadata = {
-  title: "Assay · agents only pay for work that passes",
+  title: "Countersign · agents only pay for work that passes",
   description:
     "x402 payments on Avalanche held in escrow until signed LLM judges verify the response. The contract checks every signature itself, and each verdict becomes an ERC-8004 validation record.",
 };

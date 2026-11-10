@@ -1,5 +1,5 @@
 {
-  "name": "assay",
+  "name": "countersign",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -11,7 +11,7 @@
   "scripts": {
     "test": "bun test packages",
     "test:contracts": "cd contracts && forge test",
-    "typecheck": "bunx tsc -p packages/x402-assay && bunx tsc -p packages/core && bunx tsc -p services/node",
+    "typecheck": "bunx tsc -p packages/x402-countersign && bunx tsc -p packages/core && bunx tsc -p services/node",
     "node": "bun run services/node/src/index.ts",
     "sellers": "bun run demo/sellers/src/index.ts",
     "agent": "bun run demo/agent/buy.ts",
@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "viem": "^2.21.0",
-    "@assay/x402": "workspace:*",
-    "@assay/core": "workspace:*"
+    "@countersign/x402": "workspace:*",
+    "@countersign/core": "workspace:*"
   }
 }

@@ -44,10 +44,10 @@ export function optAddr(env: string): Address | undefined {
 
 export const addresses = {
   get usdc() { return addr("USDC"); },
-  get escrow() { return addr("ASSAY_ESCROW"); },
-  get oracle() { return addr("ASSAY_ORACLE"); },
+  get escrow() { return addr("COUNTERSIGN_ESCROW"); },
+  get oracle() { return addr("COUNTERSIGN_ORACLE"); },
   get registry() { return addr("SIGNER_REGISTRY"); },
-  get validator() { return optAddr("ASSAY_VALIDATOR"); },
+  get validator() { return optAddr("COUNTERSIGN_VALIDATOR"); },
   get identity() { return optAddr("ERC8004_IDENTITY"); },
   get validation() { return optAddr("ERC8004_VALIDATION"); },
 };

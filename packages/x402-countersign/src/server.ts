@@ -1,12 +1,12 @@
-// Seller side of the x402 `assay` scheme. Wrap any handler:
+// Seller side of the x402 `countersign` scheme. Wrap any handler:
 //
-//   const route = assayRoute({ ...cfg, handler: async ({ body }) => Response.json(await work(body)) });
+//   const route = countersignRoute({ ...cfg, handler: async ({ body }) => Response.json(await work(body)) });
 //   Bun.serve({ fetch: (req) => route(req) });
 //
-// Unpaid request  -> 402, PAYMENT-REQUIRED offers `exact` (final) and `assay` (judged).
-// `assay` payment -> the server re-derives the terms from ITS OWN config, checks the buyer's
+// Unpaid request  -> 402, PAYMENT-REQUIRED offers `exact` (final) and `countersign` (judged).
+// `countersign` payment -> the server re-derives the terms from ITS OWN config, checks the buyer's
 //                    EIP-3009 signature, asks the facilitator to open the escrow, runs the handler,
-//                    signs a receipt over the exact evidence bytes and returns it in X-ASSAY-RECEIPT,
+//                    signs a receipt over the exact evidence bytes and returns it in X-COUNTERSIGN-RECEIPT,
 //                    then commits the evidence through the facilitator in the background.
 // The facilitator never holds funds: the escrow terms are the signed nonce.
 
@@ -16,19 +16,19 @@ import { CORS_HEADERS, HEADERS, decodeHeader, encodeHeader } from "./encoding";
 import { buildEvidence, evidenceHashOf, truncateUtf8 } from "./evidence";
 import { NO_AGENT, ZERO_ADDRESS, escrowIdFor, rubricHashOf, termsHash } from "./terms";
 import {
-  EVIDENCE_FORMAT, SCHEME, type AssayExtra, type AssayPayload, type AssayReceipt, type ExactPayload,
+  EVIDENCE_FORMAT, SCHEME, type CountersignExtra, type CountersignPayload, type CountersignReceipt, type ExactPayload,
   type PaymentPayload, type PaymentRequired, type PaymentRequirements, type Policy, type SettleResponse, type VerifyResponse,
 } from "./types";
 
 export interface HandlerContext {
   request: Request;
   body: Uint8Array;
-  scheme: "assay" | "exact";
+  scheme: "countersign" | "exact";
   payer: Address;
   escrowId?: Hex;
 }
 
-export interface AssayRouteConfig {
+export interface CountersignRouteConfig {
   chainId: number;
   usdc: Address;
   usdcName?: string;
@@ -45,7 +45,7 @@ export interface AssayRouteConfig {
   validator?: Address;
   identityRegistry?: Address;
   validationRegistry?: Address;
-  /** Assay node base URL (facilitator endpoints, evidence intake). */
+  /** Countersign node base URL (facilitator endpoints, evidence intake). */
   facilitator: string;
   description?: string;
   mimeType?: string;
@@ -63,7 +63,7 @@ export interface AssayRouteConfig {
 
 const DEFAULTS = { deadlineSeconds: 900, maxRequestBytes: 3000, maxResponseBytes: 2000, maxTimeoutSeconds: 120 };
 
-export function assayRequirements(cfg: AssayRouteConfig, resource: string): PaymentRequirements<AssayExtra> {
+export function countersignRequirements(cfg: CountersignRouteConfig, resource: string): PaymentRequirements<CountersignExtra> {
   return {
     scheme: SCHEME,
     network: `eip155:${cfg.chainId}`,
@@ -96,7 +96,7 @@ export function assayRequirements(cfg: AssayRouteConfig, resource: string): Paym
   };
 }
 
-export function exactRequirements(cfg: AssayRouteConfig, resource: string): PaymentRequirements {
+export function exactRequirements(cfg: CountersignRouteConfig, resource: string): PaymentRequirements {
   return {
     scheme: "exact",
     network: `eip155:${cfg.chainId}`,
@@ -153,7 +153,7 @@ export async function postEvidence(
   return false;
 }
 
-export function assayRoute(cfg: AssayRouteConfig): (req: Request) => Promise<Response> {
+export function countersignRoute(cfg: CountersignRouteConfig): (req: Request) => Promise<Response> {
   const log = cfg.log ?? (() => {});
   const domain = usdcDomain(cfg.chainId, cfg.usdc, cfg.usdcName, cfg.usdcVersion);
   const maxReq = cfg.maxRequestBytes ?? DEFAULTS.maxRequestBytes;
@@ -166,8 +166,8 @@ export function assayRoute(cfg: AssayRouteConfig): (req: Request) => Promise<Res
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
     const url = new URL(req.url);
     const resource = `${url.origin}${url.pathname}`;
-    const assayReq = assayRequirements(cfg, resource);
-    const accepts = cfg.offerExact === false ? [assayReq] : [exactRequirements(cfg, resource), assayReq];
+    const countersignReq = countersignRequirements(cfg, resource);
+    const accepts = cfg.offerExact === false ? [countersignReq] : [exactRequirements(cfg, resource), countersignReq];
     const body = new Uint8Array(await req.arrayBuffer());
     const header = req.headers.get(HEADERS.signature) ?? req.headers.get("X-PAYMENT");
     if (!header) return paymentRequired(accepts);
@@ -180,7 +180,7 @@ export function assayRoute(cfg: AssayRouteConfig): (req: Request) => Promise<Res
     }
     const scheme = payment.accepted?.scheme;
     if (scheme === "exact" && cfg.offerExact !== false) return handleExact(payment as ExactPayload);
-    if (scheme === SCHEME) return handleAssay(payment as AssayPayload);
+    if (scheme === SCHEME) return handleCountersign(payment as CountersignPayload);
     return paymentRequired(accepts, "invalid_scheme");
 
     async function run(ctx: HandlerContext): Promise<{ status: number; bytes: Uint8Array; headers: Headers }> {
@@ -203,7 +203,7 @@ export function assayRoute(cfg: AssayRouteConfig): (req: Request) => Promise<Res
       });
     }
 
-    async function handleAssay(p: AssayPayload): Promise<Response> {
+    async function handleCountersign(p: CountersignPayload): Promise<Response> {
       const a = p.payload?.authorization;
       const signature = p.payload?.signature;
       if (!a || !signature || !p.payload.salt || !p.payload.deadline) return paymentRequired(accepts, "invalid_payload");
@@ -225,24 +225,24 @@ export function assayRoute(cfg: AssayRouteConfig): (req: Request) => Promise<Res
 
       // facilitator opens the escrow (it re-checks the nonce state and balance)
       const s = await facilitatorCall<SettleResponse>(cfg.facilitator, "/facilitator/settle", {
-        x402Version: 2, paymentPayload: p, paymentRequirements: assayReq,
+        x402Version: 2, paymentPayload: p, paymentRequirements: countersignReq,
       });
       if (!s.success) return paymentRequired(accepts, s.errorReason ?? "open_failed");
       const escrowId = escrowIdFor(a.from, nonce);
       if (s.escrowId && s.escrowId.toLowerCase() !== escrowId.toLowerCase()) return json({ error: "facilitator returned a different escrow id" }, 502);
-      log(`assay: escrow ${escrowId} opened by ${a.from} (${a.value} atomic) tx ${s.transaction}`);
+      log(`countersign: escrow ${escrowId} opened by ${a.from} (${a.value} atomic) tx ${s.transaction}`);
 
       let out;
       try {
-        out = await run({ request: req, body, scheme: "assay", payer: a.from, escrowId });
+        out = await run({ request: req, body, scheme: "countersign", payer: a.from, escrowId });
       } catch (e) {
         // no evidence will be committed: the buyer is refunded at the deadline
-        log(`assay: handler failed for ${escrowId}: ${(e as Error).message}`);
+        log(`countersign: handler failed for ${escrowId}: ${(e as Error).message}`);
         return json({ error: "handler failed; escrow refunds at deadline", escrowId }, 500, { [HEADERS.response]: encodeHeader({ ...s, escrowId }) });
       }
 
       const ev = buildEvidence({ method: req.method, path: url.pathname, requestBody: body, status: out.status, responseBody: out.bytes });
-      const receipt: AssayReceipt = {
+      const receipt: CountersignReceipt = {
         escrowId, evidenceHash: ev.hash, signature: await signReceipt(cfg.seller, cfg.chainId, cfg.escrow, escrowId, ev.hash), format: EVIDENCE_FORMAT,
       };
 
@@ -251,7 +251,7 @@ export function assayRoute(cfg: AssayRouteConfig): (req: Request) => Promise<Res
       const committedHash = evidenceHashOf(committed);
       const committedSig = committedHash === ev.hash ? receipt.signature : await signReceipt(cfg.seller, cfg.chainId, cfg.escrow, escrowId, committedHash);
       void postEvidence(cfg.facilitator, { escrowId, evidence: committed, receipt: { evidenceHash: committedHash, signature: committedSig }, by: "seller" })
-        .then((ok) => log(`assay: evidence for ${escrowId} ${ok ? "accepted" : "NOT accepted"} by node${committedHash !== ev.hash ? " (tampered)" : ""}`));
+        .then((ok) => log(`countersign: evidence for ${escrowId} ${ok ? "accepted" : "NOT accepted"} by node${committedHash !== ev.hash ? " (tampered)" : ""}`));
 
       return new Response(out.bytes as BodyInit, {
         status: out.status,

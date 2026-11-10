@@ -1,8 +1,8 @@
-# Assay
+# Countersign
 
 **Agents only pay for work that passes.**
 
-Assay is a new x402 payment option for Avalanche. The agent's USDC is held until two LLM judges check the
+Countersign is a new x402 payment option for Avalanche. The agent's USDC is held until two LLM judges check the
 response against the seller's promise. The contract then verifies their signed verdicts **itself** (`sha256` of the
 exact bytes, `ecrecover` of each judge key) and pays the seller or refunds the agent. Every outcome is written to
 the seller's **ERC-8004 validation record**, so the next agent can check a verified track record before it buys.
@@ -17,9 +17,9 @@ the seller's **ERC-8004 validation record**, so the next agent can check a verif
 x402 payments are final: an agent pays before it sees the response, so an empty, invented or off-spec answer
 is money gone. Seller reputation today is whatever the seller claims about itself.
 
-Assay adds a second option next to `exact` in the 402 offer:
+Countersign adds a second option next to `exact` in the 402 offer:
 
-| | `exact` | `assay` |
+| | `exact` | `countersign` |
 |---|---|---|
 | When the seller is paid | Immediately | Only after a verified YES |
 | Junk answer | Paid anyway | Agent refunded |
@@ -34,18 +34,18 @@ sequenceDiagram
   autonumber
   participant A as Agent
   participant S as Seller (x402 middleware)
-  participant N as Assay node (facilitator + keeper)
-  participant E as AssayEscrow
-  participant O as AssayOracle
-  participant V as AssayValidator → ERC-8004
+  participant N as Countersign node (facilitator + keeper)
+  participant E as CountersignEscrow
+  participant O as CountersignOracle
+  participant V as CountersignValidator → ERC-8004
   A->>S: POST /summarize
-  S-->>A: 402: accepts [exact, assay{rubric, policy, agentId}]
+  S-->>A: 402: accepts [exact, countersign{rubric, policy, agentId}]
   A->>V: getSummary(agentId): verified record (optional)
   A->>A: sign ReceiveWithAuthorization, nonce = termsHash(terms)
   A->>S: retry + PAYMENT-SIGNATURE
   S->>N: /facilitator/settle
   N->>E: openWithAuthorization (USDC locked; only the escrow can redeem it)
-  S-->>A: 200 + X-ASSAY-RECEIPT (EIP-712 over the exact evidence bytes)
+  S-->>A: 200 + X-COUNTERSIGN-RECEIPT (EIP-712 over the exact evidence bytes)
   S->>N: evidence + receipt
   A->>N: evidence + receipt (backup; a different hash = equivocation)
   N->>E: setEvidenceWithReceipt
@@ -65,7 +65,7 @@ sequenceDiagram
 3. **Verified verdicts.** Two distinct models judge, a grounding pass checks their rationales against the evidence,
    and a calibration pass sets the confidence. Each reply starts with a fixed-width header the oracle parses by
    byte offset, and each is signed over `hex(sha256(req)):hex(sha256(resp))`.
-4. **Track record.** `AssayValidator` turns judged outcomes into ERC-8004 validation responses (YES = 100,
+4. **Track record.** `CountersignValidator` turns judged outcomes into ERC-8004 validation responses (YES = 100,
    NO or equivocation = 0). Sellers approve the validator once, so **anyone can record every sale and a
    seller cannot hide its failures**. The agent id is signed into the terms, so credit cannot be redirected.
 
@@ -95,10 +95,10 @@ without trusting the node or the website.
 
 | Contract | Address |
 |---|---|
-| AssayEscrow | _after deployment_ |
-| AssayOracle | _after deployment_ |
+| CountersignEscrow | _after deployment_ |
+| CountersignOracle | _after deployment_ |
 | SignerRegistry | _after deployment_ |
-| AssayValidator | _after deployment_ |
+| CountersignValidator | _after deployment_ |
 | Circle USDC | [`0x5425890298aed601595a70AB815c96711a31Bc65`](https://testnet.snowtrace.io/address/0x5425890298aed601595a70AB815c96711a31Bc65) |
 | ERC-8004 IdentityRegistry | [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://testnet.snowtrace.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) |
 | ERC-8004 ValidationRegistry | [`0x8004Cb1BF31DAf7788923b405b754f57acEB4272`](https://testnet.snowtrace.io/address/0x8004Cb1BF31DAf7788923b405b754f57acEB4272) |
@@ -106,10 +106,10 @@ without trusting the node or the website.
 ## Repository
 
 ```text
-contracts/               Foundry: SignerRegistry, AssayOracle, AssayEscrow, AssayValidator + tests
-packages/x402-assay/     the reusable x402 `assay` scheme (viem only): terms, evidence, receipts, seller middleware, buyer client
+contracts/               Foundry: SignerRegistry, CountersignOracle, CountersignEscrow, CountersignValidator + tests
+packages/x402-countersign/     the reusable x402 `countersign` scheme (viem only): terms, evidence, receipts, seller middleware, buyer client
 packages/core/           judge pipeline (self-attested signers; groq/gemini/local backends), chain config, settle verifier
-services/node/           facilitator (exact + assay), evidence intake, keeper, read API, pay-per-verdict /judge
+services/node/           facilitator (exact + countersign), evidence intake, keeper, read API, pay-per-verdict /judge
 demo/sellers/            honest, lazy, injector, swapper
 demo/agent/              the buyer agent the demo video follows
 web/                     Next.js dashboard (neubrutalism)
@@ -163,7 +163,7 @@ standard Next.js app (`NEXT_PUBLIC_NODE_URL` points it at the node).
 | `contracts/test/Escrow.t.sol` (26) | gasless open, every term bound to the nonce, replay, expiry, front-running, receipts (EOA + ERC-1271), equivocation, every outcome reason, fund conservation |
 | `contracts/test/Validator.t.sol` (15) | 100 / 0 / 0 scores, unrecorded outcomes, self-filing, stolen or misdirected credit, double recording |
 | `contracts/test/ForkFuji.t.sol` | full purchase against the **real** Fuji USDC and ERC-8004 registries (`FUJI_RPC_URL=… forge test --match-contract ForkFuji`) |
-| `packages/x402-assay/test` | TypeScript ↔ Solidity parity (terms hash, escrow id, receipt digest, request hash), evidence format |
+| `packages/x402-countersign/test` | TypeScript ↔ Solidity parity (terms hash, escrow id, receipt digest, request hash), evidence format |
 
 Gas: `settle` with two judges ≈ 2.1M (measured on a Fuji fork), `openWithAuthorization` ≈ 200k.
 
@@ -181,11 +181,11 @@ could farm a good record by paying itself; this is visible on-chain, and filteri
 
 ## What existed vs what's new
 
-| Area | Reused (first commit) | New in Assay |
+| Area | Reused (first commit) | New in Countersign |
 |---|---|---|
-| Contracts | `SignerRegistry`, the oracle's byte-bound verdict checks and quorum policy (renamed `AssayOracle`), escrow v1 functions, 20 tests | `AssayEscrow` v2: gasless `openWithAuthorization` with the terms as the EIP-3009 nonce, agent id in the terms, EIP-712 seller receipts, `proveEquivocation`, outcome reasons, deadline refund by anyone. **`AssayValidator`** (ERC-8004 records with self-filing). 42 new tests, including a Fuji fork test |
+| Contracts | `SignerRegistry`, the oracle's byte-bound verdict checks and quorum policy (renamed `CountersignOracle`), escrow v1 functions, 20 tests | `CountersignEscrow` v2: gasless `openWithAuthorization` with the terms as the EIP-3009 nonce, agent id in the terms, EIP-712 seller receipts, `proveEquivocation`, outcome reasons, deadline refund by anyone. **`CountersignValidator`** (ERC-8004 records with self-filing). 42 new tests, including a Fuji fork test |
 | Chain | (another testnet) | Avalanche Fuji: Circle USDC `ReceiveWithAuthorization`, ERC-8004 Identity + Validation registries |
-| x402 | one `exact` pay-per-verdict endpoint | the **`assay` scheme** (offer format, seller middleware, buyer client with trust check and equivocation watch), facilitator endpoints, reusable `@assay/x402` package |
+| x402 | one `exact` pay-per-verdict endpoint | the **`countersign` scheme** (offer format, seller middleware, buyer client with trust check and equivocation watch), facilitator endpoints, reusable `@countersign/x402` package |
 | Judges | prompts, header format, self-attested signer | `local:` backend, injection-aware judge prompt, judge-as-a-service on `exact` |
 | Off-chain | relayer scripts | node (facilitator + keeper + API), four demo sellers, demo agent, Next.js dashboard with in-browser verification |
 

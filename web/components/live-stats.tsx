@@ -18,7 +18,7 @@ export function LiveStats() {
       </div>
       <p className="mt-3 flex items-center gap-2 font-mono text-xs">
         <span className={`inline-block h-2.5 w-2.5 border-2 border-black ${error ? "bg-pink" : "nb-live bg-green"}`} />
-        {error ? `node offline (${error})` : "live from the Assay node, refreshed every 4 s"}
+        {error ? `node offline (${error})` : "live from the Countersign node, refreshed every 4 s"}
       </p>
     </div>
   );

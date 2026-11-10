@@ -1,4 +1,4 @@
-// Deploy SignerRegistry, AssayOracle, AssayEscrow, AssayValidator and record the addresses.
+// Deploy SignerRegistry, CountersignOracle, CountersignEscrow, CountersignValidator and record the addresses.
 //   bun run scripts/deploy.ts            # uses RPC_URL / CHAIN_ID from .env (Fuji by default)
 //   VERIFY=1 bun run scripts/deploy.ts   # also verify on Snowtrace (Routescan)
 import { $ } from "bun";
@@ -23,8 +23,8 @@ console.log(out.split("\n").filter((l) => /=0x|Contract Address|verified|Success
 
 const found: Record<string, string> = {};
 for (const m of out.matchAll(/^\s*([A-Z_]+)=(0x[0-9a-fA-F]{40})\s*$/gm)) found[m[1]!] = m[2]!;
-for (const k of ["SIGNER_REGISTRY", "ASSAY_ORACLE", "ASSAY_ESCROW"]) if (!found[k]) throw new Error(`deploy output missing ${k}`);
-if (found.ASSAY_VALIDATOR === "0x0000000000000000000000000000000000000000") found.ASSAY_VALIDATOR = "";
+for (const k of ["SIGNER_REGISTRY", "COUNTERSIGN_ORACLE", "COUNTERSIGN_ESCROW"]) if (!found[k]) throw new Error(`deploy output missing ${k}`);
+if (found.COUNTERSIGN_VALIDATOR === "0x0000000000000000000000000000000000000000") found.COUNTERSIGN_VALIDATOR = "";
 setEnv(found);
 
 const d = readDeployment(chainId);
@@ -33,8 +33,8 @@ d.explorer = process.env.EXPLORER ?? "";
 d.deployedAt = new Date().toISOString();
 (d as any).deployBlock = Number(deployBlock);
 d.contracts = {
-  usdc: process.env.USDC!, signerRegistry: found.SIGNER_REGISTRY!, oracle: found.ASSAY_ORACLE!, escrow: found.ASSAY_ESCROW!,
-  validator: found.ASSAY_VALIDATOR || null, identityRegistry: process.env.ERC8004_IDENTITY || null, validationRegistry: process.env.ERC8004_VALIDATION || null,
+  usdc: process.env.USDC!, signerRegistry: found.SIGNER_REGISTRY!, oracle: found.COUNTERSIGN_ORACLE!, escrow: found.COUNTERSIGN_ESCROW!,
+  validator: found.COUNTERSIGN_VALIDATOR || null, identityRegistry: process.env.ERC8004_IDENTITY || null, validationRegistry: process.env.ERC8004_VALIDATION || null,
 };
 d.sellers = []; // agent ids are per deployment of the validator; re-run register-sellers
 writeDeployment(d);

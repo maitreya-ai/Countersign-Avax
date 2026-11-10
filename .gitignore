@@ -21,3 +21,4 @@ docs/project-overview.md
 docs/architecture.md
 # local fork deployments
 deployments/local-*.json
+contracts/broadcast/

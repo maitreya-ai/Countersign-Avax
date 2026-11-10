@@ -1,6 +1,6 @@
 import { Badge, Card, Container, Kicker, SectionTitle } from "@/components/ui";
 
-export const metadata = { title: "Protocol · Assay" };
+export const metadata = { title: "Protocol · Countersign" };
 
 function Code({ children, title }: { children: string; title?: string }) {
   return (
@@ -12,7 +12,7 @@ function Code({ children, title }: { children: string; title?: string }) {
 }
 
 const OFFER = `{
-  "scheme": "assay",
+  "scheme": "countersign",
   "network": "eip155:43113",
   "asset": "0x5425890298aed601595a70AB815c96711a31Bc65",   // Circle USDC (Fuji)
   "amount": "250000",                                       // 0.25 USDC
@@ -20,17 +20,17 @@ const OFFER = `{
   "maxTimeoutSeconds": 120,
   "extra": {
     "name": "USD Coin", "version": "2",                     // USDC EIP-712 domain
-    "escrow": "0x<AssayEscrow>",
+    "escrow": "0x<CountersignEscrow>",
     "rubric": "Exactly 5 bullets. Every bullet is supported by …",
     "policy": { "judges": 2, "minAgree": 2, "minConfBps": 8500, "requireGrounded": true },
     "deadlineSeconds": 900,
     "arbiter": "0x0000000000000000000000000000000000000000",
     "agentId": "296",                                       // seller's ERC-8004 identity
-    "validator": "0x<AssayValidator>",
+    "validator": "0x<CountersignValidator>",
     "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
     "validationRegistry": "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
-    "facilitator": "https://<assay-node>",
-    "evidence": { "format": "assay-evidence-v1", "maxRequestBytes": 3000, "maxResponseBytes": 2000 }
+    "facilitator": "https://<countersign-node>",
+    "evidence": { "format": "countersign-evidence-v1", "maxRequestBytes": 3000, "maxResponseBytes": 2000 }
   }
 }`;
 
@@ -39,7 +39,7 @@ const PAYLOAD = `{
   "accepted": { …the offer above… },
   "payload": {
     "authorization": {
-      "from": "0x<agent>", "to": "0x<AssayEscrow>", "value": "250000",
+      "from": "0x<agent>", "to": "0x<CountersignEscrow>", "value": "250000",
       "validAfter": "<now-60>", "validBefore": "<now+120>",
       "nonce": "0x<termsHash(...)>"         // the terms ARE the nonce
     },
@@ -49,7 +49,7 @@ const PAYLOAD = `{
   }
 }`;
 
-const TERMS = `bytes32 TERMS_TAG = keccak256("assay.terms.v1");
+const TERMS = `bytes32 TERMS_TAG = keccak256("countersign.terms.v1");
 
 termsHash = keccak256(abi.encode(
   TERMS_TAG, block.chainid, address(escrow),
@@ -59,13 +59,13 @@ termsHash = keccak256(abi.encode(
 
 escrowId = keccak256(abi.encode(payer, termsHash));
 
-// AssayEscrow.openWithAuthorization:
+// CountersignEscrow.openWithAuthorization:
 usdc.receiveWithAuthorization(payer, address(this), amount,
                               validAfter, validBefore, termsHash, v, r, s);
 // USDC requires msg.sender == to  -> only the escrow can redeem it (no front-running)
 // any changed term -> different nonce -> USDC signature check fails`;
 
-const EVIDENCE = `ASSAY-EVIDENCE v1
+const EVIDENCE = `COUNTERSIGN-EVIDENCE v1
 REQUEST POST /honest/summarize
 {"document":"The Pune Municipal Corporation has …","bullets":5}
 
@@ -74,7 +74,7 @@ RESPONSE 200
 
 evidenceHash = keccak256(utf8 bytes)     // UTF-8, LF, no trailing newline`;
 
-const RECEIPT = `domain  = { name: "AssayEscrow", version: "1", chainId, verifyingContract: escrow }
+const RECEIPT = `domain  = { name: "CountersignEscrow", version: "1", chainId, verifyingContract: escrow }
 Receipt(bytes32 escrowId, bytes32 evidenceHash)
 
 setEvidenceWithReceipt(id, evidenceHash, uri, sellerSig)   // anyone can submit it
@@ -85,23 +85,23 @@ const HEADER = `VERDICT:Y;CONF:0.93;RUBRIC:0x<64 hex>;EVID:0x<64 hex>;<rationale
 
 signed text = hex(sha256(requestBytes)) ":" hex(sha256(responseBytes))   // EIP-191`;
 
-const SELLER = `import { assayRoute } from "@assay/x402";
+const SELLER = `import { countersignRoute } from "@countersign/x402";
 
-const route = assayRoute({
+const route = countersignRoute({
   chainId: 43113, usdc, escrow, seller: privateKeyToAccount(KEY),
   price: 250_000n,
   rubric: "Exactly 5 bullets. Every bullet is supported by …",
   policy: { judges: 2, minAgree: 2, minConfBps: 8500, requireGrounded: true },
   agentId: 296n, validator, identityRegistry, validationRegistry,
-  facilitator: "https://<assay-node>",
+  facilitator: "https://<countersign-node>",
   handler: async ({ body }) => Response.json(await summarize(body)),
 });
 Bun.serve({ fetch: route });`;
 
-const BUYER = `import { fetchWithAssay } from "@assay/x402";
+const BUYER = `import { fetchWithCountersign } from "@countersign/x402";
 
-const p = await fetchWithAssay(url, { method: "POST", body }, {
-  account, publicClient, prefer: "assay", maxAmount: 1_000_000n,
+const p = await fetchWithCountersign(url, { method: "POST", body }, {
+  account, publicClient, prefer: "countersign", maxAmount: 1_000_000n,
   minTrust: { minCount: 3, minAvg: 80, requireSelfFiling: true },  // ERC-8004
 });
 const final = await p.watch();   // Resolved (seller paid) | Refunded`;
@@ -113,7 +113,7 @@ const FUNCS: [string, string, string][] = [
   ["settle(id, judges, grounding, calibration, ids)", "anyone", "Oracle verifies every signature on-chain → pay, refund or escalate"],
   ["arbitrate(id, release)", "arbiter", "Human fallback for escalations (optional)"],
   ["refundAfterDeadline(id)", "anyone", "No verdict by the deadline → buyer refunded"],
-  ["AssayValidator.record(id)", "anyone", "Writes the ERC-8004 validation response: YES 100, NO / equivocation 0"],
+  ["CountersignValidator.record(id)", "anyone", "Writes the ERC-8004 validation response: YES 100, NO / equivocation 0"],
 ];
 
 const THREATS: [string, string][] = [
@@ -123,7 +123,7 @@ const THREATS: [string, string][] = [
   ["Front-run or alter the payment", "receiveWithAuthorization only accepts msg.sender == escrow, and the nonce is the terms hash."],
   ["Serve A, commit B", "The buyer holds a signed receipt for A, so proveEquivocation refunds the buyer and the seller's record takes a 0."],
   ["Withhold the evidence", "Anyone can submit it with the seller's receipt, or the buyer is refunded at the deadline."],
-  ["Hide failed sales", "The seller approves AssayValidator once, so anyone can record every judged sale. Buyers check the approval."],
+  ["Hide failed sales", "The seller approves CountersignValidator once, so anyone can record every judged sale. Buyers check the approval."],
   ["Steal someone's record", "The agent id is signed into the terms, ownerOf(agentId) must equal the payee, and there is one record per purchase."],
   ["Keeper goes down", "Every function is permissionless, and the buyer is refunded after the deadline."],
 ];
@@ -134,7 +134,7 @@ export default function ProtocolPage() {
       <SectionTitle
         kicker="Protocol"
         kickerClass="bg-blue"
-        title={<>The <code className="bg-yellow px-2">assay</code> x402 scheme</>}
+        title={<>The <code className="bg-yellow px-2">countersign</code> x402 scheme</>}
         sub="A new x402 payment option for Avalanche. Sellers list it next to exact. Clients that don't know it still see exact first."
       />
 
@@ -213,7 +213,7 @@ export default function ProtocolPage() {
           <Kicker className="bg-green">7 · Buy with it</Kicker>
           <div className="mt-4"><Code title="agent.ts">{BUYER}</Code></div>
           <Card className="mt-6 bg-yellow p-4 text-sm">
-            <b>Facilitator endpoints</b> (assay node): <code className="font-mono">POST /facilitator/verify</code>, <code className="font-mono">POST /facilitator/settle</code>,{" "}
+            <b>Facilitator endpoints</b> (countersign node): <code className="font-mono">POST /facilitator/verify</code>, <code className="font-mono">POST /facilitator/settle</code>,{" "}
             <code className="font-mono">GET /facilitator/supported</code>, <code className="font-mono">POST /evidence</code>. Paid judge-as-a-service:{" "}
             <code className="font-mono">POST /judge</code> (x402 exact).
           </Card>

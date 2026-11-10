@@ -1,4 +1,4 @@
-# Assay node + demo sellers in one process (one port). Needs a persistent volume at /data.
+# Countersign node + demo sellers in one process (one port). Needs a persistent volume at /data.
 FROM oven/bun:1.4
 WORKDIR /app
 COPY package.json bun.lock ./

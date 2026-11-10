@@ -5,8 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {SignerRegistry} from "../../src/SignerRegistry.sol";
-import {AssayOracle} from "../../src/AssayOracle.sol";
-import {AssayEscrow} from "../../src/AssayEscrow.sol";
+import {CountersignOracle} from "../../src/CountersignOracle.sol";
+import {CountersignEscrow} from "../../src/CountersignEscrow.sol";
 
 /// @notice Shared helpers: judge keys, signed verdict bundles, EIP-3009 and receipt signing.
 abstract contract JudgeBase is Test {
@@ -21,7 +21,7 @@ abstract contract JudgeBase is Test {
 
     string internal constant RUBRIC =
         "Exactly 5 bullets. Every bullet is supported by a sentence in the source document. No facts that are not in the source.";
-    string internal constant EVIDENCE = "ASSAY-EVIDENCE v1\nREQUEST POST /honest/summarize\n{...}\n\nRESPONSE 200\n- a\n- b";
+    string internal constant EVIDENCE = "COUNTERSIGN-EVIDENCE v1\nREQUEST POST /honest/summarize\n{...}\n\nRESPONSE 200\n- a\n- b";
 
     function registerJudges(SignerRegistry registry) internal {
         registry.sync(vm.addr(PK_A), vm.addr(PK_A), "groq:openai/gpt-oss-120b", 0, bytes32(0));
@@ -54,20 +54,20 @@ abstract contract JudgeBase is Test {
         out[64] = ":";
     }
 
-    function attest(uint256 pk, bytes memory req, bytes memory resp) internal pure returns (AssayOracle.Attested memory) {
+    function attest(uint256 pk, bytes memory req, bytes memory resp) internal pure returns (CountersignOracle.Attested memory) {
         bytes32 digest = MessageHashUtils.toEthSignedMessageHash(signedText(req, resp));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
-        return AssayOracle.Attested({reqBody: req, respBody: resp, signature: abi.encodePacked(r, s, v), provider: vm.addr(pk)});
+        return CountersignOracle.Attested({reqBody: req, respBody: resp, signature: abi.encodePacked(r, s, v), provider: vm.addr(pk)});
     }
 
     /// @dev two judges with verdicts vA/vB, grounding g, calibration conf
     function bundle(bytes32 r, bytes32 e, string memory vA, string memory vB, string memory g, string memory conf)
         internal
         pure
-        returns (AssayOracle.Attested[] memory judges, AssayOracle.Attested memory grounding, AssayOracle.Attested memory calibration)
+        returns (CountersignOracle.Attested[] memory judges, CountersignOracle.Attested memory grounding, CountersignOracle.Attested memory calibration)
     {
         bytes memory req = reqBody(r, e);
-        judges = new AssayOracle.Attested[](2);
+        judges = new CountersignOracle.Attested[](2);
         judges[0] = attest(PK_A, req, respBody(string.concat(header(vA, "0.95", r, e), "five grounded bullets")));
         judges[1] = attest(PK_B, req, respBody(string.concat(header(vB, "0.92", r, e), "bullets match source")));
         grounding = attest(PK_G, req, respBody(string.concat(header(g, "0.99", r, e), "0 unsupported claims.")));
@@ -79,8 +79,8 @@ abstract contract JudgeBase is Test {
         s[0] = "a"; s[1] = "b"; s[2] = "g"; s[3] = "c";
     }
 
-    function pol() internal pure returns (AssayOracle.Policy memory) {
-        return AssayOracle.Policy({judges: 2, minAgree: 2, minConfBps: 8500, requireGrounded: true});
+    function pol() internal pure returns (CountersignOracle.Policy memory) {
+        return CountersignOracle.Policy({judges: 2, minAgree: 2, minConfBps: 8500, requireGrounded: true});
     }
 
     /// @dev EIP-712 signature of USDC ReceiveWithAuthorization for `usdc` (domain "USD Coin", "2").
@@ -104,19 +104,19 @@ abstract contract JudgeBase is Test {
 
     /// @dev Build and sign an OpenAuth for `escrow` under the default policy and RUBRIC.
     function buildAuth(
-        AssayEscrow escrow,
+        CountersignEscrow escrow,
         address usdc,
         uint256 payerPk,
         address payee,
         uint96 amount,
         uint256 agentId,
         bytes32 salt
-    ) internal view returns (AssayEscrow.OpenAuth memory a, bytes32 termsNonce) {
+    ) internal view returns (CountersignEscrow.OpenAuth memory a, bytes32 termsNonce) {
         uint64 deadline = uint64(block.timestamp + 15 minutes);
         termsNonce = escrow.termsHash(payee, address(0), amount, deadline, keccak256(bytes(RUBRIC)), pol(), agentId, salt);
         (uint8 v, bytes32 r, bytes32 s) =
             signReceive(payerPk, usdc, address(escrow), amount, block.timestamp - 1, block.timestamp + 2 minutes, termsNonce);
-        a = AssayEscrow.OpenAuth({
+        a = CountersignEscrow.OpenAuth({
             payer: vm.addr(payerPk),
             payee: payee,
             arbiter: address(0),
@@ -132,7 +132,7 @@ abstract contract JudgeBase is Test {
         });
     }
 
-    function signReceipt(uint256 pk, AssayEscrow escrow, bytes32 id, bytes32 evidenceHash) internal view returns (bytes memory) {
+    function signReceipt(uint256 pk, CountersignEscrow escrow, bytes32 id, bytes32 evidenceHash) internal view returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, escrow.receiptDigest(id, evidenceHash));
         return abi.encodePacked(r, s, v);
     }

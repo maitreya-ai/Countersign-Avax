@@ -2,7 +2,7 @@
 // concurrent loops never race on the keeper's nonce.
 
 import { BaseError, ContractFunctionRevertedError, type Abi, type Address, type Hex } from "viem";
-import { CHAIN_ID, NETWORK, addresses, publicClient, wallet } from "@assay/core";
+import { CHAIN_ID, NETWORK, addresses, publicClient, wallet } from "@countersign/core";
 
 export const keeper = wallet(process.env.KEEPER_PRIVATE_KEY ? "KEEPER_PRIVATE_KEY" : "DEPLOYER_PRIVATE_KEY");
 

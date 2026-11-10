@@ -3,21 +3,21 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SignerRegistry} from "../src/SignerRegistry.sol";
-import {AssayOracle} from "../src/AssayOracle.sol";
-import {AssayEscrow} from "../src/AssayEscrow.sol";
-import {AssayValidator} from "../src/AssayValidator.sol";
+import {CountersignOracle} from "../src/CountersignOracle.sol";
+import {CountersignEscrow} from "../src/CountersignEscrow.sol";
+import {CountersignValidator} from "../src/CountersignValidator.sol";
 import {IIdentityRegistry, IValidationRegistry} from "../src/interfaces/IERC8004.sol";
 import {JudgeBase} from "./utils/JudgeBase.sol";
 import {MockUSDC3009, MockIdentityRegistry, MockValidationRegistry} from "./utils/Mocks.sol";
 
 contract ValidatorTest is JudgeBase {
     SignerRegistry registry;
-    AssayOracle oracle;
-    AssayEscrow escrow;
+    CountersignOracle oracle;
+    CountersignEscrow escrow;
     MockUSDC3009 usdc;
     MockIdentityRegistry identity;
     MockValidationRegistry validation;
-    AssayValidator validator;
+    CountersignValidator validator;
 
     uint256 constant AGENT_PK = 0xA6E27;
     uint256 constant SELLER_PK = 0x5E11E8;
@@ -29,12 +29,12 @@ contract ValidatorTest is JudgeBase {
     function setUp() public {
         vm.warp(1_800_000_000);
         registry = new SignerRegistry(address(this));
-        oracle = new AssayOracle(registry);
+        oracle = new CountersignOracle(registry);
         usdc = new MockUSDC3009();
-        escrow = new AssayEscrow(IERC20(address(usdc)), oracle);
+        escrow = new CountersignEscrow(IERC20(address(usdc)), oracle);
         identity = new MockIdentityRegistry();
         validation = new MockValidationRegistry(address(identity));
-        validator = new AssayValidator(
+        validator = new CountersignValidator(
             IValidationRegistry(address(validation)), IIdentityRegistry(address(identity)), escrow, "https://node.test/escrows/", address(this)
         );
         registerJudges(registry);
@@ -51,11 +51,11 @@ contract ValidatorTest is JudgeBase {
     // ---- helpers -------------------------------------------------------------
 
     function judged(bytes32 salt, string memory vA, string memory vB, uint256 agentId) internal returns (bytes32 id) {
-        (AssayEscrow.OpenAuth memory a,) = buildAuth(escrow, address(usdc), AGENT_PK, seller, AMOUNT, agentId, salt);
+        (CountersignEscrow.OpenAuth memory a,) = buildAuth(escrow, address(usdc), AGENT_PK, seller, AMOUNT, agentId, salt);
         id = escrow.openWithAuthorization(a, RUBRIC, pol());
         bytes32 h = keccak256(bytes(EVIDENCE));
         escrow.setEvidenceWithReceipt(id, h, "x", signReceipt(SELLER_PK, escrow, id, h));
-        (AssayOracle.Attested[] memory j, AssayOracle.Attested memory g, AssayOracle.Attested memory c) =
+        (CountersignOracle.Attested[] memory j, CountersignOracle.Attested memory g, CountersignOracle.Attested memory c) =
             bundle(keccak256(bytes(RUBRIC)), h, vA, vB, "Y", "0.95");
         escrow.settle(id, j, g, c, ids());
     }
@@ -63,7 +63,7 @@ contract ValidatorTest is JudgeBase {
     function summary() internal view returns (uint64 count, uint8 avg) {
         address[] memory vs = new address[](1);
         vs[0] = address(validator);
-        return validation.getSummary(sellerAgentId, vs, "assay");
+        return validation.getSummary(sellerAgentId, vs, "countersign");
     }
 
     // ---- scores ---------------------------------------------------------------
@@ -80,7 +80,7 @@ contract ValidatorTest is JudgeBase {
         assertEq(v, address(validator));
         assertEq(a, sellerAgentId);
         assertEq(resp, 100);
-        assertEq(tag, "assay");
+        assertEq(tag, "countersign");
     }
 
     function test_No_Records0() public {
@@ -92,7 +92,7 @@ contract ValidatorTest is JudgeBase {
     }
 
     function test_Equivocation_Records0() public {
-        (AssayEscrow.OpenAuth memory a,) = buildAuth(escrow, address(usdc), AGENT_PK, seller, AMOUNT, sellerAgentId, "e");
+        (CountersignEscrow.OpenAuth memory a,) = buildAuth(escrow, address(usdc), AGENT_PK, seller, AMOUNT, sellerAgentId, "e");
         bytes32 id = escrow.openWithAuthorization(a, RUBRIC, pol());
         bytes32 h = keccak256(bytes(EVIDENCE));
         escrow.setEvidenceWithReceipt(id, h, "x", signReceipt(SELLER_PK, escrow, id, h));
@@ -114,23 +114,23 @@ contract ValidatorTest is JudgeBase {
 
     function test_RevertWhen_Escalated() public {
         bytes32 id = judged(bytes32("1"), "Y", "N", sellerAgentId);
-        vm.expectRevert(AssayValidator.NotJudged.selector);
+        vm.expectRevert(CountersignValidator.NotJudged.selector);
         validator.record(id);
     }
 
     function test_RevertWhen_Open() public {
-        (AssayEscrow.OpenAuth memory a,) = buildAuth(escrow, address(usdc), AGENT_PK, seller, AMOUNT, sellerAgentId, "o");
+        (CountersignEscrow.OpenAuth memory a,) = buildAuth(escrow, address(usdc), AGENT_PK, seller, AMOUNT, sellerAgentId, "o");
         bytes32 id = escrow.openWithAuthorization(a, RUBRIC, pol());
-        vm.expectRevert(AssayValidator.NotJudged.selector);
+        vm.expectRevert(CountersignValidator.NotJudged.selector);
         validator.record(id);
     }
 
     function test_RevertWhen_DeadlineRefund() public {
-        (AssayEscrow.OpenAuth memory a,) = buildAuth(escrow, address(usdc), AGENT_PK, seller, AMOUNT, sellerAgentId, "d");
+        (CountersignEscrow.OpenAuth memory a,) = buildAuth(escrow, address(usdc), AGENT_PK, seller, AMOUNT, sellerAgentId, "d");
         bytes32 id = escrow.openWithAuthorization(a, RUBRIC, pol());
         vm.warp(block.timestamp + 1 hours);
         escrow.refundAfterDeadline(id);
-        vm.expectRevert(AssayValidator.NotJudged.selector);
+        vm.expectRevert(CountersignValidator.NotJudged.selector);
         validator.record(id);
     }
 
@@ -142,24 +142,24 @@ contract ValidatorTest is JudgeBase {
         bytes32 id = escrow.open(seller, arb, AMOUNT, uint64(block.timestamp + 1 days), RUBRIC, pol());
         vm.prank(seller);
         escrow.setEvidence(id, keccak256(bytes(EVIDENCE)), "x");
-        (AssayOracle.Attested[] memory j, AssayOracle.Attested memory g, AssayOracle.Attested memory c) =
+        (CountersignOracle.Attested[] memory j, CountersignOracle.Attested memory g, CountersignOracle.Attested memory c) =
             bundle(keccak256(bytes(RUBRIC)), keccak256(bytes(EVIDENCE)), "Y", "N", "Y", "0.95");
         escrow.settle(id, j, g, c, ids());
         vm.prank(arb);
         escrow.arbitrate(id, true);
         // v1 open has no agent id; and arbiter outcomes are never scored
-        vm.expectRevert(AssayValidator.NoAgent.selector);
+        vm.expectRevert(CountersignValidator.NoAgent.selector);
         validator.record(id);
-        (bool isJudged,) = validator.scoreOf(AssayEscrow.Reason.ArbiterRelease);
+        (bool isJudged,) = validator.scoreOf(CountersignEscrow.Reason.ArbiterRelease);
         assertFalse(isJudged);
-        (isJudged,) = validator.scoreOf(AssayEscrow.Reason.ArbiterRefund);
+        (isJudged,) = validator.scoreOf(CountersignEscrow.Reason.ArbiterRefund);
         assertFalse(isJudged);
     }
 
     function test_RevertWhen_RecordedTwice() public {
         bytes32 id = judged(bytes32("1"), "Y", "Y", sellerAgentId);
         validator.record(id);
-        vm.expectRevert(AssayValidator.AlreadyRecorded.selector);
+        vm.expectRevert(CountersignValidator.AlreadyRecorded.selector);
         validator.record(id);
     }
 
@@ -170,7 +170,7 @@ contract ValidatorTest is JudgeBase {
         vm.prank(address(0x0DD));
         uint256 victimId = identity.register("victim");
         bytes32 id = judged(bytes32("1"), "N", "N", victimId);
-        vm.expectRevert(abi.encodeWithSelector(AssayValidator.AgentNotPayee.selector, victimId, address(0x0DD), seller));
+        vm.expectRevert(abi.encodeWithSelector(CountersignValidator.AgentNotPayee.selector, victimId, address(0x0DD), seller));
         validator.record(id);
     }
 
@@ -198,7 +198,7 @@ contract ValidatorTest is JudgeBase {
         bytes32 rh = validator.requestHashFor(id, sellerAgentId);
         vm.prank(seller); // the seller squats its own slot with a validator that will never answer
         validation.validationRequest(address(0xDEAD), sellerAgentId, "u", rh);
-        vm.expectRevert(abi.encodeWithSelector(AssayValidator.RequestMismatch.selector, address(0xDEAD), sellerAgentId));
+        vm.expectRevert(abi.encodeWithSelector(CountersignValidator.RequestMismatch.selector, address(0xDEAD), sellerAgentId));
         validator.record(id);
     }
 

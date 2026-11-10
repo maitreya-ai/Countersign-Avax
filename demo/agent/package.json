@@ -1,7 +1,7 @@
 {
-  "name": "@assay/agent",
+  "name": "@countersign/agent",
   "private": true,
   "type": "module",
   "main": "src/lib.ts",
-  "dependencies": { "@assay/x402": "workspace:*", "@assay/core": "workspace:*", "viem": "^2.21.0" }
+  "dependencies": { "@countersign/x402": "workspace:*", "@countersign/core": "workspace:*", "viem": "^2.21.0" }
 }

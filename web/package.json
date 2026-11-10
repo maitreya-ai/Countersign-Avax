@@ -1,5 +1,5 @@
 {
-  "name": "@assay/web",
+  "name": "@countersign/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,8 +12,8 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "viem": "^2.21.0",
-    "@assay/x402": "workspace:*",
-    "@assay/core": "workspace:*"
+    "@countersign/x402": "workspace:*",
+    "@countersign/core": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",

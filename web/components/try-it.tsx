@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createPublicClient, createWalletClient, custom, http, type Address } from "viem";
-import { fetchWithAssay, getOffer, type Offer } from "@assay/x402";
+import { fetchWithCountersign, getOffer, type Offer } from "@countersign/x402";
 import { api, usePoll, useConfig, type SellerRow } from "@/lib/api";
 import { ARTICLE } from "@/lib/article";
 import { sellerBlurb, sellerColor, usdc } from "@/lib/format";
@@ -69,8 +69,8 @@ export function TryIt() {
       push(`connected ${address}`);
       try { await wallet.switchChain({ id: cfg.chainId }); } catch { await wallet.addChain({ chain }); }
       const publicClient = createPublicClient({ chain, transport: http(cfg.rpc) });
-      const p = await fetchWithAssay(url, { method: "POST", headers: { "Content-Type": "application/json" }, body }, {
-        account: { wallet, account: address as Address }, publicClient: publicClient as any, prefer: "assay", maxAmount: 2_000_000n, log: push,
+      const p = await fetchWithCountersign(url, { method: "POST", headers: { "Content-Type": "application/json" }, body }, {
+        account: { wallet, account: address as Address }, publicClient: publicClient as any, prefer: "countersign", maxAmount: 2_000_000n, log: push,
         minTrust: { minCount: 1_000_000, minAvg: 0 },
       });
       setResult({ escrowId: p.escrowId, response: new TextDecoder().decode(p.body) });
@@ -80,7 +80,7 @@ export function TryIt() {
     setBusy(null);
   }
 
-  const assay = offer?.assay;
+  const countersign = offer?.countersign;
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <div className="min-w-0 space-y-6">
@@ -155,15 +155,15 @@ export function TryIt() {
               <p className="mt-1 text-xs text-paper/70">{offer.exact.description}</p>
             </div>
           )}
-          {assay && (
+          {countersign && (
             <div className="mt-3 border-[3px] border-green p-3">
-              <div className="flex justify-between font-mono text-sm"><b className="text-green">assay</b><span>{usdc(assay.amount)} USDC</span></div>
+              <div className="flex justify-between font-mono text-sm"><b className="text-green">countersign</b><span>{usdc(countersign.amount)} USDC</span></div>
               <dl className="mt-2 space-y-1 break-all font-mono text-[11px] leading-relaxed text-paper/85">
-                <div><span className="text-yellow">rubric</span> &ldquo;{assay.extra.rubric}&rdquo;</div>
-                <div><span className="text-yellow">policy</span> {assay.extra.policy.minAgree}/{assay.extra.policy.judges} judges agree · grounded={String(assay.extra.policy.requireGrounded)} · conf ≥ {assay.extra.policy.minConfBps / 100}%</div>
-                <div><span className="text-yellow">escrow</span> {assay.extra.escrow}</div>
-                <div><span className="text-yellow">agentId</span> #{assay.extra.agentId ?? "-"} · <span className="text-yellow">validator</span> {assay.extra.validator?.slice(0, 10)}…</div>
-                <div><span className="text-yellow">deadline</span> {assay.extra.deadlineSeconds}s · <span className="text-yellow">USDC domain</span> {assay.extra.name} v{assay.extra.version}</div>
+                <div><span className="text-yellow">rubric</span> &ldquo;{countersign.extra.rubric}&rdquo;</div>
+                <div><span className="text-yellow">policy</span> {countersign.extra.policy.minAgree}/{countersign.extra.policy.judges} judges agree · grounded={String(countersign.extra.policy.requireGrounded)} · conf ≥ {countersign.extra.policy.minConfBps / 100}%</div>
+                <div><span className="text-yellow">escrow</span> {countersign.extra.escrow}</div>
+                <div><span className="text-yellow">agentId</span> #{countersign.extra.agentId ?? "-"} · <span className="text-yellow">validator</span> {countersign.extra.validator?.slice(0, 10)}…</div>
+                <div><span className="text-yellow">deadline</span> {countersign.extra.deadlineSeconds}s · <span className="text-yellow">USDC domain</span> {countersign.extra.name} v{countersign.extra.version}</div>
               </dl>
             </div>
           )}

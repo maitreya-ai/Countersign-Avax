@@ -1,11 +1,11 @@
 "use client";
 
-// In-browser verification of one purchase, from public chain data only. Trusts neither the Assay
+// In-browser verification of one purchase, from public chain data only. Trusts neither the Countersign
 // node nor this website: every check re-derives a value from transaction calldata or contract state.
 
 import { createPublicClient, http, keccak256, toBytes, type Hex } from "viem";
-import { escrowAbi, registryAbi, requestHashFor, validationRegistryAbi, verifyReceipt, NO_AGENT } from "@assay/x402";
-import { verifySettleTx } from "@assay/core/src/verify";
+import { escrowAbi, registryAbi, requestHashFor, validationRegistryAbi, verifyReceipt, NO_AGENT } from "@countersign/x402";
+import { verifySettleTx } from "@countersign/core/src/verify";
 import type { EscrowDetail, NodeConfig } from "./api";
 
 export interface CheckResult { label: string; ok: boolean; detail?: string }
@@ -67,7 +67,7 @@ export async function verifyInBrowser(cfg: NodeConfig, e: EscrowDetail): Promise
       const [validator, agentId, response] = await client.readContract({ address: cfg.contracts.validationRegistry, abi: validationRegistryAbi, functionName: "getValidationStatus", args: [rh] });
       const want = onchain.reason === 1 ? 100 : 0;
       add(
-        "ERC-8004 record: written by AssayValidator, for the agent the buyer paid, with the right score",
+        "ERC-8004 record: written by CountersignValidator, for the agent the buyer paid, with the right score",
         validator.toLowerCase() === cfg.contracts.validator.toLowerCase() && agentId === onchain.agentId && response === want,
         `agent #${agentId} · response ${response}`,
       );

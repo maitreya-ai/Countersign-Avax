@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { TryIt } from "@/components/try-it";
 import { Container, SectionTitle } from "@/components/ui";
 
-export const metadata = { title: "Try it · Assay" };
+export const metadata = { title: "Try it · Countersign" };
 
 export default function TryPage() {
   return (

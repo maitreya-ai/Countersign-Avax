@@ -1,11 +1,11 @@
-// The demo story: an agent buys the same summary from four sellers over x402 `assay`, the judges
+// The demo story: an agent buys the same summary from four sellers over x402 `countersign`, the judges
 // decide, the contract pays or refunds, and the agent picks its next seller by verified record.
 //
 //   bun run demo/agent/buy.ts                 # all four sellers
 //   bun run demo/agent/buy.ts --only honest   # one seller
 
-import { account, fmtUsdc, publicClient, txUrl } from "@assay/core";
-import { usdcAbi, type Purchase } from "@assay/x402";
+import { account, fmtUsdc, publicClient, txUrl } from "@countersign/core";
+import { usdcAbi, type Purchase } from "@countersign/x402";
 import { buyFrom, inspectSeller, SELLER_NAMES } from "./src/lib";
 
 const SELLERS = (process.env.SELLERS_URL ?? "http://localhost:8403").replace(/\/$/, "");
@@ -19,7 +19,7 @@ const color = (ok: boolean, s: string) => `\x1b[${ok ? 32 : 31}m${s}\x1b[0m`;
 
 const balance = () => publicClient.readContract({ address: usdc, abi: usdcAbi, functionName: "balanceOf", args: [agent.address] });
 
-console.log(bold(`\nAssay demo agent ${agent.address}`));
+console.log(bold(`\nCountersign demo agent ${agent.address}`));
 const start = await balance();
 console.log(`USDC balance ${fmtUsdc(start)}   (the agent holds no AVAX: every purchase is one gasless signature)\n`);
 
@@ -30,10 +30,10 @@ for (const name of only) {
   console.log(`  ${name.padEnd(9)} agent ${String(t?.agentId ?? "-").padEnd(6)} ${t ? `${t.count} judged sales, avg ${t.avg}/100` : "no record"}${t?.selfFiling ? "" : dim("  (seller has not approved self-filing)")}`);
 }
 
-console.log(bold("\n2. Buying a 5-bullet summary from each seller (scheme: assay)"));
+console.log(bold("\n2. Buying a 5-bullet summary from each seller (scheme: countersign)"));
 const purchases: { name: string; p: Purchase }[] = [];
 for (const name of only) {
-  const p = await buyFrom(SELLERS, name, { account: agent, publicClient, log: (m) => console.log(dim(`    ${m}`)) });
+  const p = await buyFrom(SELLERS, name, { account: agent, publicClient, log: (m) => console.log(dim(`    [${name}] ${m}`)) });
   const bullets = (() => { try { return JSON.parse(new TextDecoder().decode(p.body)).bullets as string[]; } catch { return []; } })();
   console.log(`  ${bold(name)}: HTTP ${p.response.status}, ${bullets.length} bullets, escrow ${p.escrowId?.slice(0, 18)}…`);
   if (p.payment?.transaction) console.log(dim(`    open  ${txUrl(p.payment.transaction)}`));

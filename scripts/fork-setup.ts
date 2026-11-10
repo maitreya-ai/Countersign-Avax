@@ -4,7 +4,7 @@
 //   bun --env-file=.env.fork run scripts/fork-setup.ts
 import { createTestClient, encodeAbiParameters, http, keccak256, numberToHex, parseEther, publicActions, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { usdcAbi } from "@assay/x402";
+import { usdcAbi } from "@countersign/x402";
 
 const rpc = process.env.RPC_URL ?? "http://127.0.0.1:8545";
 const t = createTestClient({ mode: "anvil", transport: http(rpc) }).extend(publicActions);

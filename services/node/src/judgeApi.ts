@@ -1,8 +1,8 @@
 // Judge-as-a-service over x402 `exact`: POST /judge { rubric, evidence } -> 402 until paid, then a
-// signed verdict bundle any AssayEscrow can verify, plus settle calldata (swap in your escrow id).
+// signed verdict bundle any CountersignEscrow can verify, plus settle calldata (swap in your escrow id).
 
 import { encodeFunctionData, keccak256, toHex, type Hex } from "viem";
-import { CORS_HEADERS, HEADERS, decodeHeader, encodeHeader, escrowAbi, type ExactPayload, type PaymentRequirements } from "@assay/x402";
+import { CORS_HEADERS, HEADERS, decodeHeader, encodeHeader, escrowAbi, type ExactPayload, type PaymentRequirements } from "@countersign/x402";
 import { cfg, keeper } from "./ctx";
 import { buildBundle, registerSignersFor, settleArgs } from "./judgeKit";
 import { facilitatorSettle, facilitatorVerify } from "./facilitator";
@@ -10,7 +10,7 @@ import { facilitatorSettle, facilitatorVerify } from "./facilitator";
 function requirements(resource: string): PaymentRequirements {
   return {
     scheme: "exact", network: cfg.network, asset: cfg.usdc, amount: cfg.judgePrice.toString(), payTo: keeper.account.address,
-    maxTimeoutSeconds: 600, resource, description: "One signed verdict bundle (2 judges + grounding + calibration) for AssayEscrow.settle",
+    maxTimeoutSeconds: 600, resource, description: "One signed verdict bundle (2 judges + grounding + calibration) for CountersignEscrow.settle",
     mimeType: "application/json", extra: { name: "USD Coin", version: "2" },
   };
 }

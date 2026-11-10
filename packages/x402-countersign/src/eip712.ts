@@ -1,4 +1,4 @@
-// EIP-712 payloads: USDC EIP-3009 authorisations and AssayEscrow receipts.
+// EIP-712 payloads: USDC EIP-3009 authorisations and CountersignEscrow receipts.
 
 import { parseSignature, verifyTypedData, type Account, type Address, type Hex, type LocalAccount, type PublicClient, type WalletClient } from "viem";
 import type { Authorization } from "./types";
@@ -33,7 +33,7 @@ async function signTyped(signer: Signer, args: any): Promise<Hex> {
   return signer.signTypedData(args);
 }
 
-/** Buyer: sign ReceiveWithAuthorization (assay scheme; `to` is the escrow, nonce is the terms hash). */
+/** Buyer: sign ReceiveWithAuthorization (countersign scheme; `to` is the escrow, nonce is the terms hash). */
 export function signReceiveAuthorization(signer: Signer, domain: ReturnType<typeof usdcDomain>, a: Authorization) {
   return signTyped(signer, { domain, types: receiveTypes, primaryType: "ReceiveWithAuthorization", message: authMessage(a) });
 }
@@ -57,7 +57,7 @@ export function splitSig(signature: Hex) {
 // ---- receipts ------------------------------------------------------------------
 
 export function receiptDomain(chainId: number, escrow: Address) {
-  return { name: "AssayEscrow", version: "1", chainId, verifyingContract: escrow } as const;
+  return { name: "CountersignEscrow", version: "1", chainId, verifyingContract: escrow } as const;
 }
 
 export const receiptTypes = {
