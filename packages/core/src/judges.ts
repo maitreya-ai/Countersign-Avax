@@ -10,9 +10,9 @@ import { isSelfModel, selfChat, verifyAttestation } from "./selfsign";
 // Judges must be distinct models (the oracle checks); grounding and calibration may reuse one.
 export const MODELS = {
   judgeA: process.env.JUDGE_A ?? "groq:openai/gpt-oss-120b",
-  judgeB: process.env.JUDGE_B ?? "groq:qwen/qwen3-32b",
+  judgeB: process.env.JUDGE_B ?? "groq:qwen/qwen3.8-27b",
   grounding: process.env.GROUNDING ?? "groq:openai/gpt-oss-120b",
-  calibration: process.env.CALIBRATION ?? "groq:qwen/qwen3-32b",
+  calibration: process.env.CALIBRATION ?? "groq:qwen/qwen3.8-27b",
 };
 
 export const JUDGES = process.env.JUDGES === "1" ? 1 : 2;
