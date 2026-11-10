@@ -11,7 +11,8 @@ export const CONFIG = {
   deployBlock: BigInt((deployment as any).deployBlock ?? 0),
   /** JSON-RPC for calls. */
   rpc: process.env.NEXT_PUBLIC_RPC_URL ?? "https://api.avax-test.network/ext/bc/C/rpc",
-  /** JSON-RPC for event logs (the public Fuji endpoint caps eth_getLogs at 100 blocks). */
+  /** JSON-RPC for event logs: allows wide eth_getLogs ranges (50k blocks) and browser CORS. If it fails,
+   *  the reader re-scans the window in 100-block chunks on `rpc` (the public Fuji endpoint's cap). */
   logRpc: process.env.NEXT_PUBLIC_LOG_RPC_URL ?? "https://avalanche-fuji-c-chain-rpc.publicnode.com",
   logRange: BigInt(process.env.NEXT_PUBLIC_LOG_RANGE ?? 50_000),
   contracts: {

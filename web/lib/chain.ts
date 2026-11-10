@@ -119,7 +119,24 @@ function evidenceFromRequest(reqBody: Uint8Array): string | null {
 export function createChainReader(c: ReaderConfig) {
   const chain = { ...fuji, id: c.chainId, rpcUrls: { default: { http: [c.rpc] } } };
   const callClient = createPublicClient({ chain, transport: fallback([http(c.rpc), http(c.logRpc)]), batch: { multicall: true } });
-  const logClient = createPublicClient({ chain, transport: fallback([http(c.logRpc), http(c.rpc)]) });
+  const logClient = createPublicClient({ chain, transport: http(c.logRpc, { retryCount: 2 }) });
+  const SMALL = 100n; // the public Fuji endpoint's eth_getLogs cap
+
+  /** Wide-range logs from the log provider; if it fails, the same window in 100-block chunks on `rpc`. */
+  async function getLogsRobust(address: Address[], fromBlock: bigint, toBlock: bigint) {
+    try {
+      return await logClient.getLogs({ address, fromBlock, toBlock });
+    } catch {
+      const windows: [bigint, bigint][] = [];
+      for (let f = fromBlock; f <= toBlock; f += SMALL) windows.push([f, f + SMALL - 1n < toBlock ? f + SMALL - 1n : toBlock]);
+      const out: Awaited<ReturnType<typeof logClient.getLogs>> = [];
+      for (let i = 0; i < windows.length; i += 5) {
+        const batch = await Promise.all(windows.slice(i, i + 5).map(([f, t]) => callClient.getLogs({ address, fromBlock: f, toBlock: t })));
+        for (const b of batch) out.push(...(b as any));
+      }
+      return out;
+    }
+  }
   const settleCache = new Map<string, Promise<DecodedSettle>>();
 
   const byId = new Map<string, ChainEscrow>();
@@ -228,7 +245,7 @@ export function createChainReader(c: ReaderConfig) {
     let recorded = false;
     while (from <= head) {
       const to = from + c.logRange - 1n < head ? from + c.logRange - 1n : head;
-      const raw = await logClient.getLogs({ address: [c.contracts.escrow, c.contracts.validator], fromBlock: from, toBlock: to });
+      const raw = await getLogsRobust([c.contracts.escrow, c.contracts.validator], from, to);
       recorded = applyLogs(raw, touched) || recorded;
       from = to + 1n;
     }

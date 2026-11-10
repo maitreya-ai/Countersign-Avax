@@ -22,9 +22,6 @@ export function Footer() {
             Verified outcomes for agent payments on Avalanche. x402 payments settle only when signed LLM judges confirm the
             seller kept its promise, and every verdict becomes a portable ERC-8004 record.
           </p>
-          <p className="mt-4 max-w-sm text-xs text-paper/60">
-            Built by Maitreya.
-          </p>
         </div>
         <div>
           <div className="font-mono text-xs font-bold uppercase tracking-wider text-yellow">

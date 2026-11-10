@@ -324,4 +324,4 @@ Cloudflare Workers + Durable Objects · Groq. Claude Code was used for research,
 
 ## License
 
-MIT. See [LICENSE](LICENSE) and [CREDITS.md](CREDITS.md).
+MIT. See [LICENSE](LICENSE).
