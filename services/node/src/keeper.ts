@@ -251,7 +251,7 @@ async function judgeOne(id: string) {
   log(`  oracle.resolve -> ${["NO", "YES", "ESCALATE"][Number(outcome)]}`);
   const { hash, receipt } = await send({
     address: cfg.escrow, abi: escrowAbi as any, functionName: "settle",
-    args: [id, sa.judges, sa.grounding, sa.calibration, sa.requestIds], gas: 8_000_000n,
+    args: [id, sa.judges, sa.grounding, sa.calibration, sa.requestIds],
   });
   store.update(id, { settle_tx: hash, outcome: Number(outcome), settle_gas: receipt.gasUsed.toString() });
   store.setJob(id, "done");

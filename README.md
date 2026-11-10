@@ -7,7 +7,7 @@ response against the seller's promise. The contract then verifies their signed v
 exact bytes, `ecrecover` of each judge key) and pays the seller or refunds the agent. Every outcome is written to
 the seller's **ERC-8004 validation record**, so the next agent can check a verified track record before it buys.
 
-- **Live dashboard:** _to be added after deployment_
+- **Live dashboard:** _link after hosting_
 - **Network:** Avalanche Fuji C-Chain (`eip155:43113`), Circle USDC, ERC-8004 Identity + Validation registries
 
 ---
@@ -91,17 +91,32 @@ Every purchase page on the dashboard has **Verify in browser**. It reads the cha
 calldata, re-hashes every byte, recovers each judge key, re-applies the policy and checks the ERC-8004 record,
 without trusting the node or the website.
 
-## Deployed contracts (Fuji)
+## Deployed on Avalanche Fuji
+
+All contracts are verified on Snowtrace.
 
 | Contract | Address |
 |---|---|
-| CountersignEscrow | _after deployment_ |
-| CountersignOracle | _after deployment_ |
-| SignerRegistry | _after deployment_ |
-| CountersignValidator | _after deployment_ |
+| CountersignEscrow | [`0x646fc9D1FD54574761dB44f7691f0352BCdFF501`](https://testnet.snowtrace.io/address/0x646fc9D1FD54574761dB44f7691f0352BCdFF501) |
+| CountersignOracle | [`0x15d77bf67210D4D8de2E2E51dE221F3Ef4600574`](https://testnet.snowtrace.io/address/0x15d77bf67210D4D8de2E2E51dE221F3Ef4600574) |
+| SignerRegistry | [`0x20028875D57eBAba1A0689976FF61B684c1Aa43a`](https://testnet.snowtrace.io/address/0x20028875D57eBAba1A0689976FF61B684c1Aa43a) |
+| CountersignValidator | [`0xC66819e0dEB88E9c99Bc70D6B3e2fA446321AaC6`](https://testnet.snowtrace.io/address/0xC66819e0dEB88E9c99Bc70D6B3e2fA446321AaC6) |
 | Circle USDC | [`0x5425890298aed601595a70AB815c96711a31Bc65`](https://testnet.snowtrace.io/address/0x5425890298aed601595a70AB815c96711a31Bc65) |
 | ERC-8004 IdentityRegistry | [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://testnet.snowtrace.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) |
 | ERC-8004 ValidationRegistry | [`0x8004Cb1BF31DAf7788923b405b754f57acEB4272`](https://testnet.snowtrace.io/address/0x8004Cb1BF31DAf7788923b405b754f57acEB4272) |
+
+Demo sellers are ERC-8004 agents #296 (honest), #297 (lazy), #298 (injector) and #299 (swapper).
+
+### Live demo run (real LLM judges: `openai/gpt-oss-120b` + `qwen/qwen3.8-27b` on Groq)
+
+| Seller | Outcome | Open (gasless for the buyer) | Verdict | ERC-8004 record |
+|---|---|---|---|---|
+| honest | **YES**: seller paid, record 100 | [open](https://testnet.snowtrace.io/tx/0x42b82704288d80adcaabba5ef93cb73df018e6bf25518cb02928aae2b8040197) | [settle](https://testnet.snowtrace.io/tx/0xbb551b238955a679ab959ada31ca05ccbb7ec487442773cde6645759c46e5594) | [100](https://testnet.snowtrace.io/tx/0xa78c65bd9b65ca6d788170f55aba978770bf8fc502b552dd0a9a32f4136fb11e) |
+| lazy | **NO**: refunded, record 0 | [open](https://testnet.snowtrace.io/tx/0x4524c2a9f2707a284e77feca208ef7a5b0fb92a14a1302f18b8e4da8b227f391) | [settle](https://testnet.snowtrace.io/tx/0x82d5d5422350c2ba74b2e05c1aae415661e027a95457ae5838e7dc5119d274b0) | [0](https://testnet.snowtrace.io/tx/0x830a94cfcbaf54d4bd479d17791e2520560771f242e969d351bb115b4e1b19ca) |
+| injector | **NO**: refunded (judges ignored the injected note), record 0 | [open](https://testnet.snowtrace.io/tx/0x101b841442b45f1495541532e8f70f236e3ad0c64faa8332bfc0d5f0f70af13c) | [settle](https://testnet.snowtrace.io/tx/0xdfabecbba9f9998b42aee037ee774d00599ecd86182ecdc0a6c12a83b0c49744) | [0](https://testnet.snowtrace.io/tx/0xe5ddd06a13d68a744c95146c7e5527680ab27fff778df215b2b816cb6055a5c1) |
+| swapper | **Equivocation**: refunded, record 0 | [open](https://testnet.snowtrace.io/tx/0xb8061e989ee64b7fbd35f8fd3812786973b8bfe8d86ef05fcc16f7d167ea34b1) | [proveEquivocation](https://testnet.snowtrace.io/tx/0x4f450f054ab41a4cbf5a4032cd8996b77e1b2e184b3c7d07ba8a1353c38cb547) | [0](https://testnet.snowtrace.io/tx/0xce917f96b2ae57061d58419b5e0a97e35204dff1b3650a83c7ada7d5e841a19c) |
+
+The buyer spent 0.25 USDC of 1.00: it paid only for the summary that passed, and it never held any AVAX.
 
 ## Repository
 
@@ -165,7 +180,7 @@ standard Next.js app (`NEXT_PUBLIC_NODE_URL` points it at the node).
 | `contracts/test/ForkFuji.t.sol` | full purchase against the **real** Fuji USDC and ERC-8004 registries (`FUJI_RPC_URL=… forge test --match-contract ForkFuji`) |
 | `packages/x402-countersign/test` | TypeScript ↔ Solidity parity (terms hash, escrow id, receipt digest, request hash), evidence format |
 
-Gas: `settle` with two judges ≈ 2.1M (measured on a Fuji fork), `openWithAuthorization` ≈ 200k.
+Gas on Fuji: `settle` with two judges and real LLM transcripts ≈ 2.35M, `openWithAuthorization` ≈ 200k. At Fuji's current 160 wei gas price a settle costs well under a millionth of an AVAX.
 
 ## Trust model
 
