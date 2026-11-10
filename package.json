@@ -5,7 +5,8 @@
   "workspaces": [
     "packages/*",
     "services/*",
-    "demo/*"
+    "demo/*",
+    "web"
   ],
   "scripts": {
     "test": "bun test packages",

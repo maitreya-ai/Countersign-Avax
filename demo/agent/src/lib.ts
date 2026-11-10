@@ -9,8 +9,8 @@ export const SELLER_NAMES = ["honest", "lazy", "injector", "swapper"] as const;
 export type SellerName = (typeof SELLER_NAMES)[number];
 
 /** The exact request body bytes (they become part of the evidence). */
-export function summarizeBody(): string {
-  return JSON.stringify({ document: ARTICLE, bullets: 5 });
+export function summarizeBody(document: string = ARTICLE): string {
+  return JSON.stringify({ document, bullets: 5 });
 }
 
 export function sellerUrl(base: string, name: string) {
@@ -26,11 +26,11 @@ export async function inspectSeller(base: string, name: string, client: PublicCl
 export async function buyFrom(
   base: string,
   name: string,
-  opts: { account: LocalAccount; publicClient: PublicClient; maxAmount?: bigint; log?: (m: string) => void },
+  opts: { account: LocalAccount; publicClient: PublicClient; maxAmount?: bigint; log?: (m: string) => void; document?: string },
 ): Promise<Purchase> {
   return fetchWithAssay(
     sellerUrl(base, name),
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: summarizeBody() },
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: summarizeBody(opts.document) },
     {
       account: opts.account, publicClient: opts.publicClient, prefer: "assay", maxAmount: opts.maxAmount ?? 1_000_000n,
       minTrust: { minCount: 1_000_000, minAvg: 0 }, // read the record, never refuse (the demo compares sellers itself)

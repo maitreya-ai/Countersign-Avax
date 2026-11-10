@@ -28,7 +28,9 @@ const deployment = (() => {
 // ---- the three behaviours -----------------------------------------------------------------
 
 function sentences(doc: string): string[] {
-  return doc.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).map((p) => p.match(/[^.!?]+[.!?]/)?.[0]?.trim() ?? p);
+  // a sentence ends at . ! ? followed by whitespace + a capital letter (or the end), so "2.6 million" stays whole
+  return doc.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
+    .map((p) => p.match(/^[\s\S]+?[.!?](?=\s+["“A-Z]|\s*$)/)?.[0]?.trim() ?? p);
 }
 
 /** Extractive: the first sentence of each paragraph, verbatim (grounded by construction). */

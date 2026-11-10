@@ -61,16 +61,19 @@ async function sellers() {
 
 let lastDemo = 0;
 const demoLog: string[] = [];
-async function demoBuy(name: string) {
+async function demoBuy(name: string, document?: string) {
   if (!cfg.demoEnabled) return json({ error: "demo purchases are disabled on this node" }, 403);
   if (!SELLER_NAMES.includes(name as any)) return json({ error: `unknown seller ${name}` }, 400);
+  if (document !== undefined && (typeof document !== "string" || document.length < 40 || document.length > 2600)) {
+    return json({ error: "document must be 40 to 2600 characters" }, 400);
+  }
   const wait = 20_000 - (Date.now() - lastDemo);
   if (wait > 0) return json({ error: `one demo purchase every 20 s; try again in ${Math.ceil(wait / 1000)} s` }, 429);
   lastDemo = Date.now();
   const agent = account("AGENT_PRIVATE_KEY");
   const lines: string[] = [];
   try {
-    const p = await buyFrom(cfg.sellersUrl, name, { account: agent, publicClient, log: (m) => lines.push(m) });
+    const p = await buyFrom(cfg.sellersUrl, name, { account: agent, publicClient, log: (m) => lines.push(m), document });
     demoLog.unshift(`${new Date().toISOString()} ${name} ${p.escrowId}`);
     kick();
     return json({ seller: name, escrowId: p.escrowId, status: p.response.status, receiptValid: p.receiptValid, payment: p.payment, response: new TextDecoder().decode(p.body), log: lines });
@@ -125,8 +128,8 @@ const server = Bun.serve({
       if (p === "/activity") return json({ events: store.recentEvents(Number(url.searchParams.get("limit") ?? 30)) });
       if (p === "/judge" && req.method === "POST") return judgeRoute(req);
       if (p === "/demo/buy" && req.method === "POST") {
-        const b = (await req.json().catch(() => ({}))) as { seller?: string };
-        return demoBuy(String(b.seller ?? ""));
+        const b = (await req.json().catch(() => ({}))) as { seller?: string; document?: string };
+        return demoBuy(String(b.seller ?? ""), b.document);
       }
       return json({ error: "not found" }, 404);
     } catch (e) {

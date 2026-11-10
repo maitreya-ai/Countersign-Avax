@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+/* Neubrutalism tokens (neubrutalism.com): thick black borders, hard zero-blur shadows,
+   square corners, flat saturated fills on an off-white page. */
+@theme {
+  --color-ink: #000000;
+  --color-paper: #fffdf5;
+  --color-card: #ffffff;
+  --color-yellow: #ffd23f;
+  --color-pink: #ff6b6b;
+  --color-blue: #74b9ff;
+  --color-green: #88d498;
+  --color-orange: #ffa552;
+  --color-lavender: #b8a9fa;
+  --color-muted: #55524a;
+
+  --font-display: var(--font-syne), "Arial Black", sans-serif;
+  --font-heading: var(--font-space-grotesk), Arial, sans-serif;
+  --font-sans: var(--font-inter), Arial, Helvetica, sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
+
+  --shadow-nb-sm: 3px 3px 0 0 #000;
+  --shadow-nb: 5px 5px 0 0 #000;
+  --shadow-nb-md: 7px 7px 0 0 #000;
+  --shadow-nb-lg: 8px 8px 0 0 #000;
+  --shadow-nb-xl: 12px 12px 0 0 #000;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-paper);
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-yellow);
+  color: #000;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-blue);
+  outline-offset: 3px;
+}
+
+@layer components {
+  .nb-card {
+    background: var(--color-card);
+    border: 3px solid #000;
+    box-shadow: var(--shadow-nb);
+  }
+  .nb-card-hover {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .nb-card-hover:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-nb-md);
+  }
+
+  .nb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 3px solid #000;
+    background: var(--color-yellow);
+    color: #000;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    padding: 0.7rem 1.4rem;
+    box-shadow: var(--shadow-nb);
+    transition: all 0.1s ease;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .nb-btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-nb-md);
+  }
+  .nb-btn:active {
+    transform: translate(3px, 3px);
+    box-shadow: none;
+  }
+  .nb-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: var(--shadow-nb-sm);
+  }
+  .nb-btn-sm {
+    padding: 0.35rem 0.8rem;
+    font-size: 0.85rem;
+    box-shadow: var(--shadow-nb-sm);
+  }
+
+  .nb-input {
+    border: 3px solid #000;
+    background: #fff;
+    padding: 0.6rem 0.8rem;
+    box-shadow: var(--shadow-nb-sm);
+    transition: all 0.1s ease;
+  }
+  .nb-input:focus {
+    outline: 3px solid var(--color-blue);
+    outline-offset: 2px;
+    box-shadow: var(--shadow-nb);
+    transform: translate(-1px, -1px);
+  }
+
+  .nb-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 2px solid #000;
+    padding: 0.1rem 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    box-shadow: 2px 2px 0 0 #000;
+    white-space: nowrap;
+  }
+
+  .nb-code {
+    border: 3px solid #000;
+    background: #111;
+    color: #f5f5f5;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    line-height: 1.55;
+    padding: 1rem;
+    overflow-x: auto;
+    box-shadow: var(--shadow-nb);
+  }
+
+  .nb-link {
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 3px;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-pink);
+  }
+  .nb-link:hover {
+    background: var(--color-yellow);
+  }
+}
+
+@keyframes nb-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.nb-live {
+  animation: nb-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes nb-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.nb-marquee {
+  animation: nb-marquee 40s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nb-marquee, .nb-live { animation: none; }
+}
