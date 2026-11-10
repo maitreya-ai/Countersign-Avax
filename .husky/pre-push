@@ -1,0 +1,6 @@
+bun run test:contracts
+if [ "$SKIP_E2E" = "1" ]; then
+  echo "pre-push: e2e skipped (SKIP_E2E=1)"
+else
+  bun run test:e2e
+fi

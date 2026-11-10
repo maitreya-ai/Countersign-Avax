@@ -1,0 +1,50 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "countersign",
+  "main": "services/node/src/worker.ts",
+  "compatibility_date": "2026-11-10",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The dapp (Next.js static export) is served as static assets; /api/* goes to the Worker.
+  "assets": {
+    "directory": "web/out",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+
+  // One SQLite-backed Durable Object runs the node: facilitator, sellers, keeper (alarms).
+  "durable_objects": {
+    "bindings": [{ "name": "NODE", "class_name": "CountersignNode" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CountersignNode"] }],
+
+  "observability": { "enabled": true },
+
+  // Public configuration. Private keys and the Groq key are secrets (wrangler secret bulk).
+  "vars": {
+    "CHAIN_ID": "43113",
+    "RPC_URL": "https://api.avax-test.network/ext/bc/C/rpc",
+    "EXPLORER": "https://testnet.snowtrace.io",
+    "USDC": "0x5425890298aed601595a70AB815c96711a31Bc65",
+    "ERC8004_IDENTITY": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+    "ERC8004_VALIDATION": "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
+    "SIGNER_REGISTRY": "0x20028875D57eBAba1A0689976FF61B684c1Aa43a",
+    "COUNTERSIGN_ORACLE": "0x15d77bf67210D4D8de2E2E51dE221F3Ef4600574",
+    "COUNTERSIGN_ESCROW": "0x646fc9D1FD54574761dB44f7691f0352BCdFF501",
+    "COUNTERSIGN_VALIDATOR": "0xC66819e0dEB88E9c99Bc70D6B3e2fA446321AaC6",
+    "JUDGES": "2",
+    "JUDGE_A": "groq:openai/gpt-oss-120b",
+    "JUDGE_B": "groq:qwen/qwen3.8-27b",
+    "GROUNDING": "groq:openai/gpt-oss-120b",
+    "CALIBRATION": "groq:qwen/qwen3.8-27b",
+    "NODE_URL": "https://countersign.maitreyak1806.workers.dev/api",
+    "SELLERS_URL": "https://countersign.maitreyak1806.workers.dev/api",
+    "SUMMARY_PRICE_USDC": "0.25",
+    "JUDGE_PRICE_USDC": "0.05",
+    "DEADLINE_SECONDS": "900",
+    "FACILITATOR_EXACT": "local",
+    "DEMO_ENABLED": "1"
+  }
+}

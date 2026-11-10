@@ -3,13 +3,13 @@
 // validation record, and refunds buyers after the deadline. Every action is permissionless on-chain;
 // the keeper only saves the buyer and seller the gas and the bookkeeping.
 
-import { readFileSync } from "node:fs";
 import { keccak256, parseEventLogs, toBytes, type Hex } from "viem";
 import { buildBundle, publicClient, registerSignersFor, settleArgs, toAttestedArg, type Bundle } from "./judgeKit";
 import { escrowAbi, oracleAbi, readEscrow, validatorAbi, verifyReceipt, NO_AGENT } from "@countersign/x402";
 import { HEADER_LEN, parseHeader } from "@countersign/core";
 import { cfg, reason, send } from "./ctx";
 import { store, type EscrowRow } from "./store";
+import { getDeployment } from "./deployment";
 
 const ZERO = `0x${"0".repeat(64)}`;
 const CHALLENGE_SECONDS = Number(process.env.CHALLENGE_SECONDS ?? 4);
@@ -209,7 +209,7 @@ function enqueueJudge(id: string) {
   const job = store.job(id);
   if (job && (job.status === "done" || job.status === "judging" || job.status === "failed")) return;
   if (!queue.includes(id)) { queue.push(id); store.setJob(id, "queued"); }
-  void judgeLoop();
+  if (autoJudge) void runJudges();
 }
 
 function attestationView(b: Bundle) {
@@ -260,11 +260,13 @@ async function judgeOne(id: string) {
   kick();
 }
 
-async function judgeLoop() {
+/** Judge queued escrows one at a time (at most `max` this call). */
+export async function runJudges(max = Infinity) {
   if (judging) return;
   judging = true;
+  let done = 0;
   try {
-    while (queue.length) {
+    while (queue.length && done++ < max) {
       const id = queue.shift()!;
       try {
         await judgeOne(id);
@@ -281,33 +283,57 @@ async function judgeLoop() {
   }
 }
 
-// ---- loop ---------------------------------------------------------------------------
+// ---- scheduling (host-agnostic) -------------------------------------------------------------
+// Bun: timers below. Cloudflare Durable Object: alarms call runFast() and runJudges() (worker.ts).
 
-let kicked = false;
-export function kick() {
-  if (kicked) return;
-  kicked = true;
-  setTimeout(async () => { kicked = false; await scan(); await fastTick(); }, 300);
+let autoJudge = false;
+let kickHandler: () => void = () => {};
+
+/** Fast pass: index new chain events, commit evidence, prove equivocation, record, refund. */
+export async function runFast() {
+  await scan();
+  await fastTick();
 }
 
+export function pendingJudges() {
+  return queue.length;
+}
+
+/** Ask the host to run a fast pass soon (new evidence, a new escrow, a settled verdict). */
+export function kick() {
+  kickHandler();
+}
+
+export function setKickHandler(fn: () => void) {
+  kickHandler = fn;
+}
+
+/** Reset jobs interrupted by a restart so they are picked up again. */
+export function recoverJobs() {
+  for (const row of store.active()) {
+    const job = store.job(row.id);
+    if (job && (job.status === "judging" || job.status === "queued")) store.setJob(row.id, "retry");
+  }
+}
+
+/** Local (Bun) loop: timers, judging runs concurrently with the fast pass. */
 export function startKeeper() {
-  const tick = async () => {
-    await scan();
-    await fastTick();
-  };
-  void tick();
-  setInterval(tick, Number(process.env.KEEPER_INTERVAL_MS ?? 2500));
+  autoJudge = true;
+  recoverJobs();
+  let kicked = false;
+  setKickHandler(() => {
+    if (kicked) return;
+    kicked = true;
+    setTimeout(async () => { kicked = false; await runFast(); }, 300);
+  });
+  void runFast();
+  setInterval(runFast, Number(process.env.KEEPER_INTERVAL_MS ?? 2500));
   log(`watching escrow ${cfg.escrow}${cfg.validator ? `, validator ${cfg.validator}` : ""}`);
 }
 
 export { toAttestedArg };
 
 function deployBlock(): number | null {
-  try {
-    const f = process.env.DEPLOYMENT_FILE ?? `deployments/${cfg.chainId}.json`;
-    const d = JSON.parse(readFileSync(f, "utf8"));
-    return d.deployBlock ? Number(d.deployBlock) : null;
-  } catch {
-    return null;
-  }
+  const b = getDeployment().deployBlock;
+  return b ? Number(b) : null;
 }

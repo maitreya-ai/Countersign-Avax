@@ -56,6 +56,8 @@ export interface CountersignRouteConfig {
   maxResponseBytes?: number;
   maxTimeoutSeconds?: number;
   handler: (ctx: HandlerContext) => Promise<Response>;
+  /** fetch used for facilitator and evidence calls (lets a host serve them in-process). */
+  fetchImpl?: typeof fetch;
   /** DEMO ONLY: commit different evidence than what was served, to show the equivocation proof. */
   tamperCommittedEvidence?: (servedEvidence: string) => string;
   log?: (msg: string) => void;
@@ -120,8 +122,8 @@ function paymentRequired(accepts: PaymentRequirements[], error = "Payment requir
   return json(body, 402, { [HEADERS.required]: encodeHeader(body) });
 }
 
-async function facilitatorCall<T>(base: string, path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${base.replace(/\/$/, "")}${path}`, {
+async function facilitatorCall<T>(base: string, path: string, body: unknown, f: typeof fetch = fetch): Promise<T> {
+  const res = await f(`${base.replace(/\/$/, "")}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -135,10 +137,11 @@ export async function postEvidence(
   base: string,
   body: { escrowId: Hex; evidence: string; receipt: { evidenceHash: Hex; signature: Hex }; by: string },
   attempts = 5,
+  f: typeof fetch = fetch,
 ): Promise<boolean> {
   for (let i = 0; i < attempts; i++) {
     try {
-      const res = await fetch(`${base.replace(/\/$/, "")}/evidence`, {
+      const res = await f(`${base.replace(/\/$/, "")}/evidence`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -191,10 +194,10 @@ export function countersignRoute(cfg: CountersignRouteConfig): (req: Request) =>
 
     async function handleExact(p: ExactPayload): Promise<Response> {
       const reqs = accepts[0]!;
-      const v = await facilitatorCall<VerifyResponse>(cfg.facilitator, "/facilitator/verify", { x402Version: 2, paymentPayload: p, paymentRequirements: reqs });
+      const v = await facilitatorCall<VerifyResponse>(cfg.facilitator, "/facilitator/verify", { x402Version: 2, paymentPayload: p, paymentRequirements: reqs }, cfg.fetchImpl);
       if (!v.isValid) return paymentRequired(accepts, v.invalidReason ?? "invalid_payment");
       const out = await run({ request: req, body, scheme: "exact", payer: p.payload.authorization.from });
-      const s = await facilitatorCall<SettleResponse>(cfg.facilitator, "/facilitator/settle", { x402Version: 2, paymentPayload: p, paymentRequirements: reqs });
+      const s = await facilitatorCall<SettleResponse>(cfg.facilitator, "/facilitator/settle", { x402Version: 2, paymentPayload: p, paymentRequirements: reqs }, cfg.fetchImpl);
       if (!s.success) return paymentRequired(accepts, s.errorReason ?? "settle_failed");
       log(`exact: paid ${p.payload.authorization.value} by ${p.payload.authorization.from} tx ${s.transaction}`);
       return new Response(out.bytes as BodyInit, {
@@ -226,7 +229,7 @@ export function countersignRoute(cfg: CountersignRouteConfig): (req: Request) =>
       // facilitator opens the escrow (it re-checks the nonce state and balance)
       const s = await facilitatorCall<SettleResponse>(cfg.facilitator, "/facilitator/settle", {
         x402Version: 2, paymentPayload: p, paymentRequirements: countersignReq,
-      });
+      }, cfg.fetchImpl);
       if (!s.success) return paymentRequired(accepts, s.errorReason ?? "open_failed");
       const escrowId = escrowIdFor(a.from, nonce);
       if (s.escrowId && s.escrowId.toLowerCase() !== escrowId.toLowerCase()) return json({ error: "facilitator returned a different escrow id" }, 502);
@@ -250,7 +253,7 @@ export function countersignRoute(cfg: CountersignRouteConfig): (req: Request) =>
       const committed = cfg.tamperCommittedEvidence ? cfg.tamperCommittedEvidence(ev.text) : ev.text;
       const committedHash = evidenceHashOf(committed);
       const committedSig = committedHash === ev.hash ? receipt.signature : await signReceipt(cfg.seller, cfg.chainId, cfg.escrow, escrowId, committedHash);
-      void postEvidence(cfg.facilitator, { escrowId, evidence: committed, receipt: { evidenceHash: committedHash, signature: committedSig }, by: "seller" })
+      void postEvidence(cfg.facilitator, { escrowId, evidence: committed, receipt: { evidenceHash: committedHash, signature: committedSig }, by: "seller" }, 5, cfg.fetchImpl)
         .then((ok) => log(`countersign: evidence for ${escrowId} ${ok ? "accepted" : "NOT accepted"} by node${committedHash !== ev.hash ? " (tampered)" : ""}`));
 
       return new Response(out.bytes as BodyInit, {

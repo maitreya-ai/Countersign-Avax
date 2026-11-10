@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createPublicClient, createWalletClient, custom, http, type Address } from "viem";
 import { fetchWithCountersign, getOffer, type Offer } from "@countersign/x402";
-import { api, usePoll, useConfig, type SellerRow } from "@/lib/api";
+import { api, useNode } from "@/lib/api";
+import { CONFIG, fuji, nodeUrlAbsolute } from "@/lib/config";
 import { ARTICLE } from "@/lib/article";
 import { sellerBlurb, sellerColor, usdc } from "@/lib/format";
-import { ScoreBar } from "./seller-board";
+import { ScoreBar, useSellers } from "./seller-board";
 import { Badge, Card } from "./ui";
 
 const NAMES = ["honest", "lazy", "injector", "swapper"];
@@ -20,8 +21,10 @@ declare global {
 export function TryIt() {
   const params = useSearchParams();
   const router = useRouter();
-  const { cfg } = useConfig();
-  const { data: sellers } = usePoll<{ sellers: SellerRow[] }>("/sellers", 8000);
+  const { sellers } = useSellers();
+  const { data: nodeCfg, online } = useNode<{ demoEnabled: boolean }>("/config", 15000);
+  const [base, setBase] = useState<string | null>(null);
+  useEffect(() => setBase(nodeUrlAbsolute()), []);
   const [seller, setSeller] = useState(params.get("seller") ?? "honest");
   const [doc, setDoc] = useState(ARTICLE);
   const [offer, setOffer] = useState<Offer | null>(null);
@@ -30,10 +33,10 @@ export function TryIt() {
   const [log, setLog] = useState<string[]>([]);
   const [result, setResult] = useState<{ escrowId?: string; response?: string; error?: string } | null>(null);
 
-  const url = cfg ? `${cfg.sellersUrl}/${seller}/summarize` : null;
+  const url = base ? `${base}/${seller}/summarize` : null;
   const body = useMemo(() => JSON.stringify({ document: doc, bullets: 5 }), [doc]);
   const bytes = new TextEncoder().encode(body).length;
-  const row = sellers?.sellers.find((s) => s.name === seller);
+  const row = sellers.find((s) => s.name === seller);
 
   useEffect(() => {
     if (!url) return;
@@ -45,7 +48,7 @@ export function TryIt() {
 
   async function runDemo() {
     setBusy("demo"); setLog([]); setResult(null);
-    push(`POST ${cfg?.nodeUrl}/demo/buy  { seller: "${seller}" }`);
+    push(`POST ${base}/demo/buy  { seller: "${seller}" }`);
     try {
       const r = await api<{ escrowId: string; response: string; log: string[] }>("/demo/buy", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ seller, document: doc === ARTICLE ? undefined : doc }),
@@ -59,16 +62,16 @@ export function TryIt() {
   }
 
   async function runWallet() {
-    if (!cfg || !url) return;
+    if (!url) return;
     setBusy("wallet"); setLog([]); setResult(null);
     try {
       if (!window.ethereum) throw new Error("No browser wallet found. Install Core or MetaMask, or use the demo agent.");
-      const chain = { id: cfg.chainId, name: "Avalanche Fuji", nativeCurrency: { name: "Avalanche", symbol: "AVAX", decimals: 18 }, rpcUrls: { default: { http: [cfg.rpc] } } } as const;
+      const chain = fuji;
       const wallet = createWalletClient({ chain, transport: custom(window.ethereum) });
       const [address] = await wallet.requestAddresses();
       push(`connected ${address}`);
-      try { await wallet.switchChain({ id: cfg.chainId }); } catch { await wallet.addChain({ chain }); }
-      const publicClient = createPublicClient({ chain, transport: http(cfg.rpc) });
+      try { await wallet.switchChain({ id: CONFIG.chainId }); } catch { await wallet.addChain({ chain }); }
+      const publicClient = createPublicClient({ chain, transport: http(CONFIG.rpc) });
       const p = await fetchWithCountersign(url, { method: "POST", headers: { "Content-Type": "application/json" }, body }, {
         account: { wallet, account: address as Address }, publicClient: publicClient as any, prefer: "countersign", maxAmount: 2_000_000n, log: push,
         minTrust: { minCount: 1_000_000, minAvg: 0 },
@@ -113,8 +116,14 @@ export function TryIt() {
 
         <Card className="bg-card p-5">
           <h3 className="font-heading text-lg font-bold">3 · Pay, judged</h3>
+          {online === false && (
+            <p className="mt-2 border-2 border-black bg-orange p-2 text-xs">
+              The Countersign node (facilitator, sellers, judges) isn&apos;t reachable right now, so new purchases can&apos;t be made.
+              Everything already on-chain is still shown, read straight from Avalanche.
+            </p>
+          )}
           <div className="mt-4 flex flex-wrap gap-3">
-            <button type="button" className="nb-btn bg-yellow" onClick={runDemo} disabled={!!busy || !cfg?.demoEnabled || bytes > 3000}>
+            <button type="button" className="nb-btn bg-yellow" onClick={runDemo} disabled={!!busy || !nodeCfg?.demoEnabled || bytes > 3000}>
               {busy === "demo" ? "Buying…" : "Run with the demo agent"}
             </button>
             <button type="button" className="nb-btn bg-blue" onClick={runWallet} disabled={!!busy || bytes > 3000}>
@@ -133,7 +142,7 @@ export function TryIt() {
             <div className="mt-4 space-y-3">
               <Card className="bg-green p-4">
                 <div className="font-heading font-bold">USDC locked. The response is in. Now the judges decide.</div>
-                <Link href={`/escrow/${result.escrowId}`} className="nb-btn nb-btn-sm mt-3 bg-card">Watch the verdict live →</Link>
+                <Link href={`/escrow?id=${result.escrowId}`} className="nb-btn nb-btn-sm mt-3 bg-card">Watch the verdict live →</Link>
               </Card>
               {result.response && <pre className="nb-code max-h-48 whitespace-pre-wrap">{result.response}</pre>}
             </div>

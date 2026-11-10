@@ -70,6 +70,8 @@ export interface FetchWithCountersignOptions {
   prefer?: "countersign" | "exact";
   maxAmount: bigint;
   minTrust?: { minCount: number; minAvg: number; requireSelfFiling?: boolean };
+  /** fetch implementation (defaults to the global fetch). */
+  fetch?: typeof fetch;
   /** Send our copy of the evidence + receipt to the node (default true). */
   backupEvidence?: boolean;
   log?: (msg: string) => void;
@@ -83,8 +85,8 @@ function bodyBytes(init: RequestInit): Uint8Array {
 }
 
 /** Make the unpaid request and return the seller's offer. */
-export async function getOffer(url: string, init: RequestInit = {}): Promise<Offer> {
-  const res = await fetch(url, init);
+export async function getOffer(url: string, init: RequestInit = {}, f: typeof fetch = fetch): Promise<Offer> {
+  const res = await f(url, init);
   if (res.status !== 402) return { status: res.status };
   const h = res.headers.get(HEADERS.required);
   const required: PaymentRequired = h ? decodeHeader(h) : await res.json();
@@ -125,7 +127,8 @@ export async function fetchWithCountersign(url: string, init: RequestInit, opts:
   const log = opts.log ?? (() => {});
   const sent = bodyBytes(init);
   const method = (init.method ?? "GET").toUpperCase();
-  const offer = await getOffer(url, { ...init, body: sent as BodyInit });
+  const f = opts.fetch ?? fetch;
+  const offer = await getOffer(url, { ...init, body: sent as BodyInit }, f);
   if (offer.status !== 402) throw new Error(`expected 402, got ${offer.status}`);
   const prefer = opts.prefer ?? "countersign";
   const chosen = prefer === "countersign" ? offer.countersign ?? offer.exact : offer.exact ?? offer.countersign;
@@ -143,7 +146,7 @@ export async function fetchWithCountersign(url: string, init: RequestInit, opts:
       nonce: randomSalt(),
     };
     const signature = await signTransferAuthorization(opts.account, domain, authorization);
-    const res = await fetch(url, { ...init, body: sent as BodyInit, headers: { ...(init.headers as any), [HEADERS.signature]: encodeHeader({ x402Version: 2, accepted: chosen, payload: { signature, authorization } }) } });
+    const res = await f(url, { ...init, body: sent as BodyInit, headers: { ...(init.headers as any), [HEADERS.signature]: encodeHeader({ x402Version: 2, accepted: chosen, payload: { signature, authorization } }) } });
     const body = new Uint8Array(await res.arrayBuffer());
     const pr = res.headers.get(HEADERS.response);
     return {
@@ -183,7 +186,7 @@ export async function fetchWithCountersign(url: string, init: RequestInit, opts:
   log(`signed ReceiveWithAuthorization (gasless), escrow id ${escrowId}`);
 
   const payload = { x402Version: 2, accepted: req, payload: { signature, authorization, salt, deadline: deadline.toString() } };
-  const res = await fetch(url, { ...init, body: sent as BodyInit, headers: { ...(init.headers as any), [HEADERS.signature]: encodeHeader(payload) } });
+  const res = await f(url, { ...init, body: sent as BodyInit, headers: { ...(init.headers as any), [HEADERS.signature]: encodeHeader(payload) } });
   const body = new Uint8Array(await res.arrayBuffer());
   const pr = res.headers.get(HEADERS.response);
   const payment: SettleResponse | undefined = pr ? decodeHeader(pr) : undefined;
@@ -201,7 +204,7 @@ export async function fetchWithCountersign(url: string, init: RequestInit, opts:
       && (await verifyReceipt(req.payTo, chainId, x.escrow, escrowId, receipt.evidenceHash, receipt.signature, opts.publicClient));
     log(`receipt ${receiptValid ? "matches the bytes we received" : "DOES NOT match what we received"}`);
     if (receiptValid && x.facilitator && opts.backupEvidence !== false) {
-      void postEvidence(x.facilitator, { escrowId, evidence: ev.text, receipt: { evidenceHash: receipt.evidenceHash, signature: receipt.signature }, by: "buyer" });
+      void postEvidence(x.facilitator, { escrowId, evidence: ev.text, receipt: { evidenceHash: receipt.evidenceHash, signature: receipt.signature }, by: "buyer" }, 5, f);
     }
   } else if (res.status === 402) {
     throw new Error(`payment rejected: ${new TextDecoder().decode(body).slice(0, 300)}`);
@@ -219,7 +222,7 @@ export async function fetchWithCountersign(url: string, init: RequestInit, opts:
         // seller committed something other than what it served: our receipt proves it
         log(`equivocation: committed ${committed} but served ${receipt.evidenceHash}; reporting`);
         if (x.facilitator && evidence) {
-          await postEvidence(x.facilitator, { escrowId, evidence, receipt: { evidenceHash: receipt.evidenceHash, signature: receipt.signature }, by: "buyer" });
+          await postEvidence(x.facilitator, { escrowId, evidence, receipt: { evidenceHash: receipt.evidenceHash, signature: receipt.signature }, by: "buyer" }, 5, f);
         }
         reported = true;
       }

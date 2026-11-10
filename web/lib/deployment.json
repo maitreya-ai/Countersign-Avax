@@ -1,0 +1,43 @@
+{
+  "chainId": 43113,
+  "network": "fuji",
+  "rpc": "https://api.avax-test.network/ext/bc/C/rpc",
+  "explorer": "https://testnet.snowtrace.io",
+  "contracts": {
+    "usdc": "0x5425890298aed601595a70AB815c96711a31Bc65",
+    "signerRegistry": "0x20028875D57eBAba1A0689976FF61B684c1Aa43a",
+    "oracle": "0x15d77bf67210D4D8de2E2E51dE221F3Ef4600574",
+    "escrow": "0x646fc9D1FD54574761dB44f7691f0352BCdFF501",
+    "validator": "0xC66819e0dEB88E9c99Bc70D6B3e2fA446321AaC6",
+    "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+    "validationRegistry": "0x8004Cb1BF31DAf7788923b405b754f57acEB4272"
+  },
+  "sellers": [
+    {
+      "name": "honest",
+      "address": "0xD7Ab16e18A906cEd36B0949655D7F1c95D71fB18",
+      "agentId": "296",
+      "resource": "https://countersign.maitreyak1806.workers.dev/api/honest/summarize"
+    },
+    {
+      "name": "lazy",
+      "address": "0x9489E02C4D9d84DE5d3567457021B8f608d4cdB4",
+      "agentId": "297",
+      "resource": "https://countersign.maitreyak1806.workers.dev/api/lazy/summarize"
+    },
+    {
+      "name": "injector",
+      "address": "0xC6A30fB1B84a03df82C8552Da9Ae82132cE63B0e",
+      "agentId": "298",
+      "resource": "https://countersign.maitreyak1806.workers.dev/api/injector/summarize"
+    },
+    {
+      "name": "swapper",
+      "address": "0xCB54F4A61a3b7D18f07839A63D4F510e5aFfdB6a",
+      "agentId": "299",
+      "resource": "https://countersign.maitreyak1806.workers.dev/api/swapper/summarize"
+    }
+  ],
+  "deployedAt": "2026-11-10T08:07:58.930Z",
+  "deployBlock": 60823975
+}

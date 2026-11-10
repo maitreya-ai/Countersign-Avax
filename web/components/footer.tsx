@@ -1,12 +1,9 @@
-"use client";
-
-import { useConfig } from "@/lib/api";
+import { CONFIG } from "@/lib/config";
 import { AddressLink } from "./hash";
 import { Logo } from "./nav";
 
 export function Footer() {
-  const { cfg } = useConfig();
-  const c = cfg?.contracts;
+  const c = CONFIG.contracts;
   const rows: [string, string | null | undefined][] = [
     ["CountersignEscrow", c?.escrow],
     ["CountersignOracle", c?.oracle],
@@ -31,7 +28,7 @@ export function Footer() {
         </div>
         <div>
           <div className="font-mono text-xs font-bold uppercase tracking-wider text-yellow">
-            Contracts · {cfg ? (cfg.chainId === 43113 ? "Avalanche Fuji" : cfg.chainId === 43114 ? "Avalanche C-Chain" : `chain ${cfg.chainId}`) : "loading"}
+            Contracts · {CONFIG.chainId === 43113 ? "Avalanche Fuji" : CONFIG.chainId === 43114 ? "Avalanche C-Chain" : `chain ${CONFIG.chainId}`}
           </div>
           <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
             {rows.map(([k, v]) => (

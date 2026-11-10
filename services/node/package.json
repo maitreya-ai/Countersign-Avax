@@ -11,5 +11,8 @@
     "@countersign/agent": "workspace:*",
     "viem": "^2.21.0",
     "@countersign/sellers": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22"
   }
 }

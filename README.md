@@ -7,7 +7,7 @@ response against the seller's promise. The contract then verifies their signed v
 exact bytes, `ecrecover` of each judge key) and pays the seller or refunds the agent. Every outcome is written to
 the seller's **ERC-8004 validation record**, so the next agent can check a verified track record before it buys.
 
-- **Live dashboard:** _link after hosting_
+- **Live dapp:** https://countersign.maitreyak1806.workers.dev (Cloudflare Workers; the node runs in a Durable Object)
 - **Network:** Avalanche Fuji C-Chain (`eip155:43113`), Circle USDC, ERC-8004 Identity + Validation registries
 
 ---
@@ -118,17 +118,35 @@ Demo sellers are ERC-8004 agents #296 (honest), #297 (lazy), #298 (injector) and
 
 The buyer spent 0.25 USDC of 1.00: it paid only for the summary that passed, and it never held any AVAX.
 
+## Architecture
+
+```text
+browser ──► Cloudflare Worker (countersign.maitreyak1806.workers.dev)
+             ├─ /*      the dapp: Next.js static export (Workers static assets)
+             └─ /api/*  CountersignNode Durable Object (SQLite + alarms)
+                         x402 facilitator · demo sellers · evidence intake · keeper (judge → settle → record)
+browser ──► Avalanche Fuji RPC   the dapp reads purchases, verdicts and ERC-8004 records straight from the chain
+```
+
+The dapp never depends on the node to *show* anything: escrow events come from the chain, state from a
+Multicall3 batch, seller records from the ERC-8004 Validation Registry, and every judge verdict, plus the exact
+evidence the judges saw, is decoded from the settle transaction's calldata. The node is only needed to *make*
+a purchase (it is the x402 facilitator, hosts the demo sellers and runs the judges). If it is down, everything
+already on-chain is still visible and verifiable.
+
 ## Repository
 
 ```text
-contracts/               Foundry: SignerRegistry, CountersignOracle, CountersignEscrow, CountersignValidator + tests
-packages/x402-countersign/     the reusable x402 `countersign` scheme (viem only): terms, evidence, receipts, seller middleware, buyer client
-packages/core/           judge pipeline (self-attested signers; groq/gemini/local backends), chain config, settle verifier
-services/node/           facilitator (exact + countersign), evidence intake, keeper, read API, pay-per-verdict /judge
-demo/sellers/            honest, lazy, injector, swapper
-demo/agent/              the buyer agent the demo video follows
-web/                     Next.js dashboard (neubrutalism)
-scripts/                 keys, deploy, fund, register sellers, local fork setup, test-only mock judge
+contracts/                  Foundry: SignerRegistry, CountersignOracle, CountersignEscrow, CountersignValidator + tests
+packages/x402-countersign/  the reusable x402 `countersign` scheme (viem only): terms, evidence, receipts, seller middleware, buyer client
+packages/core/              judge pipeline (self-attested signers; groq/gemini/local backends), chain config, settle verifier
+services/node/              the node: app.ts (routes), keeper, facilitator; hosts: index.ts (Bun), worker.ts (Cloudflare)
+demo/sellers/               honest, lazy, injector, swapper
+demo/agent/                 the buyer agent the demo video follows
+web/                        Next.js dapp (neubrutalism), reads Avalanche directly
+tests/e2e/                  end-to-end wiring suite (Fuji fork) and live smoke tests
+scripts/                    keys, deploy, fund, register sellers, local fork setup, test-only mock judge
+wrangler.jsonc              Cloudflare Worker + Durable Object + static assets
 ```
 
 ## Run it
@@ -136,9 +154,8 @@ scripts/                 keys, deploy, fund, register sellers, local fork setup,
 Requirements: [Bun](https://bun.sh) ≥ 1.2, [Foundry](https://getfoundry.sh).
 
 ```bash
-bun install
-(cd contracts && forge build && forge test)
-bun test packages
+bun install                      # also installs the git hooks (husky)
+bun run test                     # unit + contracts + end-to-end
 ```
 
 ### Local, on a fork of Fuji (real USDC and ERC-8004, no funds or API keys needed)
@@ -152,7 +169,6 @@ bun --env-file=.env.fork run scripts/register-sellers.ts
 bun --env-file=.env.fork run scripts/mock-llm.ts &                  # TEST ONLY deterministic judge
 MOUNT_SELLERS=1 SELLERS_URL=http://localhost:8402 bun --env-file=.env.fork run services/node/src/index.ts &
 SELLERS_URL=http://localhost:8402 bun --env-file=.env.fork run demo/agent/buy.ts
-cd web && bun run dev                                               # http://localhost:3000
 ```
 
 ### Fuji
@@ -165,10 +181,19 @@ bun run scripts/fund.ts                          # AVAX to sellers (one-time reg
 bun run scripts/register-sellers.ts              # ERC-8004 identities + validator approval
 MOUNT_SELLERS=1 bun run services/node/src/index.ts
 bun run demo/agent/buy.ts
+NEXT_PUBLIC_NODE_URL=http://localhost:8402 bun run web    # dapp on http://localhost:3000
 ```
 
-The node and sellers ship as one container (`Dockerfile`, persistent volume at `/data`). The dashboard is a
-standard Next.js app (`NEXT_PUBLIC_NODE_URL` points it at the node).
+### Deploy to Cloudflare
+
+```bash
+bun run deploy                                   # builds the static dapp, then wrangler deploy (Worker + Durable Object + assets)
+bunx wrangler secret bulk < secrets.json         # once: DEPLOYER/ATTESTER/AGENT/SELLER_* private keys + GROQ_API_KEY (never commit)
+bun run test:live                                # smoke-test the deployment
+```
+
+Public configuration (contract addresses, judge models, `NODE_URL`) lives in `wrangler.jsonc`. The Bun host
+(`Dockerfile`) runs the same node for any other platform.
 
 ## Tests
 
@@ -179,6 +204,12 @@ standard Next.js app (`NEXT_PUBLIC_NODE_URL` points it at the node).
 | `contracts/test/Validator.t.sol` (15) | 100 / 0 / 0 scores, unrecorded outcomes, self-filing, stolen or misdirected credit, double recording |
 | `contracts/test/ForkFuji.t.sol` | full purchase against the **real** Fuji USDC and ERC-8004 registries (`FUJI_RPC_URL=… forge test --match-contract ForkFuji`) |
 | `packages/x402-countersign/test` | TypeScript ↔ Solidity parity (terms hash, escrow id, receipt digest, request hash), evidence format |
+| `tests/e2e/wiring.test.ts` | end to end on a Fuji fork: deploys, registers sellers, runs the real node under `/api`, buys from all four sellers, and checks that receipts match, outcomes and ERC-8004 records are right, the dapp's chain reader reconstructs exactly what the node reports, and in-browser verification passes for every purchase |
+| `tests/e2e/live.test.ts` | smoke test of the live deployment: every page, API wiring to the deployed contracts, each seller's 402 offer |
+
+Git hooks (husky): **pre-commit** runs every typecheck and the unit tests; **pre-push** runs the contract tests
+and the end-to-end suite (`SKIP_E2E=1` to skip it when offline). Tests use Bun's Jest-compatible runner
+(`describe` / `test` / `expect`).
 
 Gas on Fuji: `settle` with two judges and real LLM transcripts ≈ 2.35M, `openWithAuthorization` ≈ 200k. At Fuji's current 160 wei gas price a settle costs well under a millionth of an AVAX.
 
@@ -206,7 +237,7 @@ could farm a good record by paying itself; this is visible on-chain, and filteri
 
 ## Built with
 
-Avalanche Fuji C-Chain · Circle USDC (EIP-3009) · ERC-8004 · x402 · Foundry · Bun · viem · Next.js · Groq.
+Avalanche Fuji C-Chain · Circle USDC (EIP-3009) · ERC-8004 · x402 · Foundry · Bun · viem · Next.js · Cloudflare Workers + Durable Objects · Groq.
 Claude Code was used for research, implementation, tests and documentation.
 
 ## License

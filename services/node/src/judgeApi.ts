@@ -9,7 +9,7 @@ import { facilitatorSettle, facilitatorVerify } from "./facilitator";
 
 function requirements(resource: string): PaymentRequirements {
   return {
-    scheme: "exact", network: cfg.network, asset: cfg.usdc, amount: cfg.judgePrice.toString(), payTo: keeper.account.address,
+    scheme: "exact", network: cfg.network, asset: cfg.usdc, amount: cfg.judgePrice.toString(), payTo: keeper().account.address,
     maxTimeoutSeconds: 600, resource, description: "One signed verdict bundle (2 judges + grounding + calibration) for CountersignEscrow.settle",
     mimeType: "application/json", extra: { name: "USD Coin", version: "2" },
   };

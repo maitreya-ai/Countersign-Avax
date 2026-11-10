@@ -6,24 +6,21 @@
 //   injector : bullets with an invented fact + an instruction to the judge -> NO, refunded, record 0
 //   swapper  : serves junk, commits a good answer as evidence              -> equivocation, refunded, record 0
 //
-//   bun run demo/sellers/src/index.ts
+//   bun run demo/sellers/src/serve.ts   (or mounted inside the node with MOUNT_SELLERS=1)
 
-import { existsSync, readFileSync } from "node:fs";
 import { privateKeyToAccount } from "viem/accounts";
 import type { Address, Hex } from "viem";
-import { CORS_HEADERS, countersignRoute, buildEvidence, type Policy } from "@countersign/x402";
+import { countersignRoute, buildEvidence, type Policy } from "@countersign/x402";
 import { CHAIN_ID, addresses, usdcUnits } from "@countersign/core";
 
 export const RUBRIC =
   "Exactly 5 bullets. Every bullet is supported by a sentence in the source document. No facts that are not in the source.";
-const POLICY: Policy = { judges: Number(process.env.JUDGES ?? 2), minAgree: Number(process.env.JUDGES ?? 2), minConfBps: 8500, requireGrounded: true };
-const PORT = Number(process.env.SELLERS_PORT ?? 8403);
-const NODE = (process.env.NODE_URL ?? "http://localhost:8402").replace(/\/$/, "");
-const PRICE = usdcUnits(process.env.SUMMARY_PRICE_USDC ?? "0.25");
-const deployment = (() => {
-  const f = process.env.DEPLOYMENT_FILE ?? `deployments/${CHAIN_ID}.json`;
-  return existsSync(f) ? JSON.parse(readFileSync(f, "utf8")) : { sellers: [] };
-})();
+// read lazily: on Cloudflare the environment is attached at startup
+const policy = (): Policy => ({ judges: Number(process.env.JUDGES ?? 2), minAgree: Number(process.env.JUDGES ?? 2), minConfBps: 8500, requireGrounded: true });
+const nodeUrl = () => (process.env.NODE_URL ?? "http://localhost:8402").replace(/\/$/, "");
+const price = () => usdcUnits(process.env.SUMMARY_PRICE_USDC ?? "0.25");
+
+interface SellerDeployment { sellers?: { name: string; address: string; agentId: string | null }[] }
 
 // ---- the three behaviours -----------------------------------------------------------------
 
@@ -84,7 +81,7 @@ function keyFor(m: Mode): Hex {
   return k as Hex;
 }
 
-function agentIdFor(m: Mode, address: Address): bigint | null {
+function agentIdFor(m: Mode, address: Address, deployment: SellerDeployment): bigint | null {
   const env = process.env[`AGENT_ID_${m.toUpperCase()}`];
   if (env) return BigInt(env);
   const s = deployment.sellers?.find((x: any) => x.name === m || x.address?.toLowerCase() === address.toLowerCase());
@@ -101,26 +98,28 @@ function docOf(body: Uint8Array): string {
 }
 
 /** Build the four paid routes (path -> handler). Also mounted inside the node when MOUNT_SELLERS=1. */
-export function sellerRoutes(): Map<string, (req: Request) => Promise<Response>> {
+export function sellerRoutes(opts: { deployment?: SellerDeployment; fetchImpl?: typeof fetch } = {}): Map<string, (req: Request) => Promise<Response>> {
+  const deployment = opts.deployment ?? { sellers: [] };
   const routes = new Map<string, (req: Request) => Promise<Response>>();
   for (const mode of MODES) {
     const seller = privateKeyToAccount(keyFor(mode));
-    const agentId = agentIdFor(mode, seller.address);
+    const agentId = agentIdFor(mode, seller.address, deployment);
     const behaviour = mode === "honest" ? honest : mode === "lazy" ? lazy : mode === "injector" ? injector : lazy;
     routes.set(`/${mode}/summarize`, countersignRoute({
       chainId: CHAIN_ID,
       usdc: addresses.usdc,
       escrow: addresses.escrow,
       seller,
-      price: PRICE,
+      price: price(),
       rubric: RUBRIC,
-      policy: POLICY,
+      policy: policy(),
       deadlineSeconds: Number(process.env.DEADLINE_SECONDS ?? 900),
       agentId,
       validator: addresses.validator,
       identityRegistry: addresses.identity,
       validationRegistry: addresses.validation,
-      facilitator: NODE,
+      facilitator: nodeUrl(),
+      fetchImpl: opts.fetchImpl,
       description: `${mode}: 5-bullet grounded summary, judged before payment`,
       log: (m) => console.log(`[${mode}] ${m}`),
       handler: async ({ body }) => {
@@ -145,24 +144,5 @@ export function sellerRoutes(): Map<string, (req: Request) => Promise<Response>>
 }
 
 export function sellersHealth() {
-  return { ok: true, sellers: MODES.map((m) => `/${m}/summarize`), price: PRICE.toString(), rubric: RUBRIC };
-}
-
-if (import.meta.main) {
-  const routes = sellerRoutes();
-  const server = Bun.serve({
-    port: PORT,
-    idleTimeout: 60,
-    async fetch(req) {
-      const url = new URL(req.url);
-      if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
-      if (url.pathname === "/" || url.pathname === "/health") {
-        return Response.json(sellersHealth(), { headers: CORS_HEADERS });
-      }
-      const route = routes.get(url.pathname);
-      if (!route) return Response.json({ error: "not found" }, { status: 404, headers: CORS_HEADERS });
-      return route(req);
-    },
-  });
-  console.log(`demo sellers on :${server.port}  price ${Number(PRICE) / 1e6} USDC  facilitator ${NODE}`);
+  return { ok: true, sellers: MODES.map((m) => `/${m}/summarize`), price: price().toString(), rubric: RUBRIC };
 }

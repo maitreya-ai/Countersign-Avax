@@ -1,19 +1,20 @@
+"use client";
+
+import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { EscrowDetail } from "@/components/escrow-detail";
 import { Container } from "@/components/ui";
 
-export const metadata = { title: "Purchase · Countersign" };
-
-async function Detail({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+function Detail() {
+  const id = useSearchParams().get("id") ?? "";
   return <EscrowDetail id={id} />;
 }
 
-export default function EscrowPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EscrowPage() {
   return (
     <Container className="py-12">
       <Suspense fallback={<div className="nb-card h-64 animate-pulse bg-card" />}>
-        <Detail params={params} />
+        <Detail />
       </Suspense>
     </Container>
   );

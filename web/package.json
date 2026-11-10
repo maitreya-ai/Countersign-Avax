@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "sync-deployment": "cp ../deployments/43113.json lib/deployment.json",
+    "predev": "bun run sync-deployment",
+    "prebuild": "bun run sync-deployment"
   },
   "dependencies": {
     "next": "16.4.6",

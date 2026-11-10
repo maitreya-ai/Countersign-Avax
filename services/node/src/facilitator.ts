@@ -59,7 +59,7 @@ async function settleExact(p: ExactPayload, req: PaymentRequirements): Promise<S
 
 async function payai(path: "verify" | "settle", body: unknown) {
   const res = await fetch(`${cfg.payaiUrl}/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  return res.json();
+  return (await res.json()) as any;
 }
 
 // ---- countersign ------------------------------------------------------------------------
